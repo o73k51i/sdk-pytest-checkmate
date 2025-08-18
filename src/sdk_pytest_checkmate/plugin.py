@@ -1,4 +1,44 @@
-"""pytest-checkmate plugin."""
+"""pytest-checkmate plugin.
+
+A pytest plugin for enriched HTML test reporting with support for:
+- Test steps with timing information
+- Soft assertions that don't immediately fail tests
+- Arbitrary data attachments to test timelines
+- Epic and story grouping with markers
+- Rich HTML reports with interactive filtering
+
+The plugin automatically activates when installed and provides three main functions:
+- step(): Context manager for recording test steps
+- soft_assert(): Non-fatal assertions collected for later evaluation
+- add_data_report(): Attach arbitrary data to test timeline
+
+Example:
+    Basic usage in a test:
+
+    ```python
+    def test_login_flow():
+        with step("Navigate to login page"):
+            driver.get("/login")
+
+        with step("Enter credentials"):
+            driver.find_element("username").send_keys("user")
+            driver.find_element("password").send_keys("pass")
+
+        soft_assert(login_button.is_enabled(), "Login button should be enabled")
+
+        with step("Submit login"):
+            login_button.click()
+
+        add_data_report({"user": "testuser", "timestamp": time.time()}, "Login Data")
+
+        assert "Dashboard" in driver.title
+    ```
+
+    Generate HTML report:
+    ```bash
+    pytest --report-html=report.html --report-title="My Test Report"
+    ```
+"""
 
 from __future__ import annotations
 
@@ -20,18 +60,49 @@ __all__ = ["step", "soft_assert", "add_data_report"]
 
 @dataclass
 class StepRecord:
+    """Record of a test step with timing and error information.
+
+    This class represents a single step in a test execution timeline.
+    Steps are created automatically when using the step() context manager.
+
+    Attributes:
+        name: Human-readable name of the step
+        seq: Sequence number for ordering in timeline
+        start: Unix timestamp when step started
+        end: Unix timestamp when step finished (None if not finished)
+        error: String representation of any error that occurred (None if no error)
+
+    Example:
+        ```python
+        # Created automatically by step() context manager
+        with step("Login user"):
+            # Step record is created and tracked automatically
+            perform_login()
+        ```
+    """
+
     name: str
     seq: int
     start: float
     end: float | None = None
     error: str | None = None
 
-    def finish(self, error: BaseException | None):
+    def finish(self, error: BaseException | None) -> None:
+        """Mark the step as finished and record any error.
+
+        Args:
+            error: Exception that occurred during step execution, or None if successful
+        """
         self.end = time.time()
         if error is not None:
             self.error = repr(error)
 
     def to_dict(self) -> dict[str, object]:
+        """Convert step record to dictionary for serialization.
+
+        Returns:
+            Dictionary containing all step information suitable for JSON serialization
+        """
         return {
             "name": self.name,
             "start": self.start,
@@ -43,18 +114,64 @@ class StepRecord:
 
 @dataclass
 class SoftCheckRecord:
+    """Record of a soft assertion with result and timing information.
+
+    Soft assertions allow tests to continue execution even when conditions fail,
+    collecting all failures for evaluation at the end of the test.
+
+    Attributes:
+        message: Descriptive message for the assertion
+        passed: Whether the assertion condition was true
+        seq: Sequence number for ordering in timeline
+        time: Unix timestamp when assertion was made
+
+    Example:
+        ```python
+        # Created automatically by soft_assert()
+        soft_assert(element.is_displayed(), "Element should be visible")
+        soft_assert(response.status_code == 200, "API should return 200")
+        ```
+    """
+
     message: str
     passed: bool
     seq: int
     time: float
 
     def to_dict(self) -> dict[str, object]:
+        """Convert soft check record to dictionary for serialization.
+
+        Returns:
+            Dictionary containing all soft check information
+        """
         return asdict(self)
 
 
 @dataclass
 class DataRecord:
-    """Arbitrary user-provided data attached to a test timeline."""
+    """Arbitrary user-provided data attached to a test timeline.
+
+    Data records allow attaching any Python object to the test execution timeline.
+    The data is serialized in the HTML report and can be expanded inline for inspection.
+
+    Attributes:
+        label: Short descriptive label shown in the report UI
+        seq: Sequence number for ordering in timeline
+        time: Unix timestamp when data was attached
+        payload: The actual data object (dict/list will be pretty-printed as JSON)
+
+    Example:
+        ```python
+        # API response data
+        add_data_report({"status": 200, "data": response.json()}, "API Response")
+
+        # Test configuration
+        add_data_report(test_config, "Test Config")
+
+        # Custom object
+        add_data_report(user_profile.__dict__, "User Profile")
+        ```
+    """
 
     label: str
     seq: int
@@ -158,23 +275,46 @@ def step(name: str) -> _StepCtx:
 
 
 def soft_assert(condition: bool, message: str | None = None) -> bool:
-    """Record a non‑fatal ("soft") assertion.
+    """Record a non-fatal ("soft") assertion that doesn't immediately fail the test.
 
-    Unlike ``assert``, a failing soft assertion does not immediately fail the
-    test; all soft failures are aggregated and (if any exist) the test is
-    marked failed at the end of its call phase.
+    Unlike regular ``assert`` statements, a failing soft assertion allows the test
+    to continue execution. All soft assertion failures are collected and the test
+    is marked as failed at the end if any soft assertions failed.
 
-    Parameters
-    ----------
-    condition: bool
-        Expression result to evaluate.
-    message: str | None
-        Optional descriptive message. Defaults to ``"Soft assertion"``.
+    This is useful for validating multiple conditions in a single test without
+    stopping at the first failure, providing a complete picture of what passed
+    and what failed.
 
-    Returns
-    -------
-    bool
-        The boolean value of ``condition`` for optional fluent usage.
+    Args:
+        condition: The boolean expression to evaluate. True means assertion passed.
+        message: Optional descriptive message explaining what is being asserted.
+                If not provided, defaults to "Soft assertion".
+
+    Returns:
+        The boolean value of ``condition``, allowing for fluent usage patterns.
+
+    Raises:
+        RuntimeError: If called outside of a test context.
+
+    Example:
+        ```python
+        def test_user_profile():
+            user = get_user_profile()
+
+            # Multiple soft assertions - test continues even if some fail
+            soft_assert(user.name is not None, "User should have a name")
+            soft_assert(user.email.endswith("@company.com"), "Email should be company domain")
+            soft_assert(len(user.permissions) > 0, "User should have permissions")
+            soft_assert(user.is_active, "User should be active")
+
+            # Test continues and all failures are reported together
+            # Final assertion can still be used for critical failures
+            assert user.id is not None, "User ID is required"
+        ```
+
+    Note:
+        The test will be marked as failed at the end of execution if any soft
+        assertions failed, with a summary of all failures displayed.
     """
     ctx = _get_ctx()
     msg = message or "Soft assertion"
@@ -189,24 +329,56 @@ def soft_assert(condition: bool, message: str | None = None) -> bool:
     return bool(condition)
 
 
-def add_data_report(data: Any, label: str):
-    """Attach arbitrary data to the test timeline.
+def add_data_report(data: Any, label: str) -> DataRecord:
+    """Attach arbitrary data to the test timeline for inspection in HTML reports.
 
-    The payload is serialized (when possible) in the HTML report and can be
-    expanded inline. Ordering is preserved relative to steps and soft asserts
-    via a monotonically increasing sequence number.
+    This function allows you to attach any Python object to the test execution
+    timeline. The data is captured with a timestamp and sequence number, then
+    serialized in the HTML report where it can be expanded inline for inspection.
 
-    Parameters
-    ----------
-    data: Any
-        Arbitrary Python object (dict / list will be pretty‑printed as JSON).
-    label: str
-        Short label shown as the clickable summary in the report UI.
+    The data appears in the timeline alongside steps and soft assertions, maintaining
+    the chronological order of test execution events.
 
-    Returns
-    -------
-    DataRecord
-        The internal record object for further inspection if needed.
+    Args:
+        data: Any Python object to attach. Dictionaries and lists are pretty-printed
+              as JSON in the report. Other objects are converted to string representation.
+        label: Short descriptive label shown as the clickable summary in the report UI.
+               This should be concise but descriptive (e.g., "API Response", "Test Config").
+
+    Returns:
+        DataRecord: The internal record object containing the data, timestamp, and metadata.
+                   Usually not needed but available for advanced use cases.
+
+    Raises:
+        RuntimeError: If called outside of a test context.
+
+    Example:
+        ```python
+        def test_api_integration():
+            # Attach configuration data
+            config = {"endpoint": "/api/users", "timeout": 30}
+            add_data_report(config, "API Config")
+
+            response = api_client.get("/api/users")
+
+            # Attach response data for debugging
+            add_data_report({
+                "status_code": response.status_code,
+                "headers": dict(response.headers),
+                "body": response.json()
+            }, "API Response")
+
+            # Attach custom objects
+            user_data = process_response(response)
+            add_data_report(user_data.__dict__, "Processed User Data")
+
+            assert response.status_code == 200
+        ```
+
+    Note:
+        - Data is serialized at report generation time, not when this function is called
+        - Large objects should be avoided as they can make reports unwieldy
+        - Sensitive data (passwords, tokens) should not be included in reports
     """
     ctx = _get_ctx()
     seq = ctx.get("seq", 0)
