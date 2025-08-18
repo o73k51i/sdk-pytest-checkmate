@@ -4,8 +4,9 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sdk-pytest-checkmate"
-version = "0.1.0"
+version = "0.0.1a"
 description = "Pytest plugin for enriched HTML test reporting with steps, soft assertions, and data attachments"
+readme = "README.md"
 requires-python = ">=3.10,<3.14"
 license = {file = "LICENSE"}
 authors = [
