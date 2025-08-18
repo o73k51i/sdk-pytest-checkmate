@@ -355,7 +355,7 @@ def pytest_runtest_makereport(item, call):
 
 def pytest_sessionfinish(session, exitstatus):
     config = session.config
-    report_opt = config.getoption("checkmate_report")
+    report_opt = config.getoption("report_html")
     if not report_opt:
         return
     results: List[Dict[str, Any]] = config.stash.get(STASH_RESULTS, [])
@@ -376,7 +376,7 @@ def pytest_sessionfinish(session, exitstatus):
     def esc(s: str) -> str:
         return html.escape(s, quote=True)
 
-    json_path_opt = config.getoption("checkmate_json")
+    json_path_opt = config.getoption("report_json")
     terminal = session.config.pluginmanager.get_plugin("terminalreporter")
 
     if json_path_opt:
@@ -392,7 +392,7 @@ def pytest_sessionfinish(session, exitstatus):
                     f"checkmate: failed to write JSON report '{json_path_opt}': {exc}"
                 )
 
-    title_opt = config.getoption("checkmate_title") or "Pytest report"
+    title_opt = config.getoption("report_title") or "Pytest report"
     esc_title = esc(title_opt)
 
     css = """
