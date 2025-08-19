@@ -521,6 +521,12 @@ def pytest_runtest_makereport(item, call):
             ],
             "epic": epic,
             "story": story,
+            "params": {
+                k: repr(v)
+                for k, v in getattr(
+                    getattr(item, "callspec", None), "params", {}
+                ).items()
+            },
         }
     )
 
@@ -882,13 +888,21 @@ def pytest_sessionfinish(session, exitstatus):
             idx = row_index
             row_index += 1
             short = esc(r.get("short", ""))
+            params = r.get("params") or {}
+            if params:
+                inline_params = ", ".join(
+                    f"{esc(str(k))}={esc(str(v))}" for k, v in params.items()
+                )
+                title_cell = f"{esc(r['title'])} [{inline_params}]"
+            else:
+                title_cell = esc(r["title"])
             timeline_html = format_timeline(
                 r.get("steps", []), r.get("soft_checks", []), r.get("data_reports", [])
             )
             errors_html = format_errors(r)
             expanded = f"<div class='detail-card status-{r['status']}'>{timeline_html}{errors_html}</div>"
             rows.append(
-                f"<tr class='status-{r['status']} main-row' data-group='{group_id}' data-status='{r['status']}' data-idx='{idx}'><td>{esc(r['title'])}</td>"
+                f"<tr class='status-{r['status']} main-row' data-group='{group_id}' data-status='{r['status']}' data-idx='{idx}'><td>{title_cell}</td>"
                 f"<td class='status-cell'><span class='st-{r['status']}'>{r['status']}</span></td><td>{r['duration']:.3f}</td><td class='details'>{short}</td></tr>"
                 f"<tr class='status-{r['status']} detail-row hidden manual-hidden' data-group='{group_id}' data-status='{r['status']}' data-idx='{idx}'><td colspan='4'>{expanded}</td></tr>"
             )
