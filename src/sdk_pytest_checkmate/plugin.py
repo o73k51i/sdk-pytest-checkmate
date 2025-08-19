@@ -570,6 +570,10 @@ def pytest_sessionfinish(session, exitstatus):
     css = """
     body { font-family: -apple-system, Arial, sans-serif; margin:0; padding:0 0 60px 0; background:#f6f8fa; }
     header { background:#e8f1ff; padding:14px 24px; font-size:20px; font-weight:600; text-align:center; }
+    header .title { }
+    .theme-toggle { cursor:pointer; border:1px solid #b4c7dd; background:#fff; color:#0a2a45; padding:6px 14px; border-radius:18px; font-size:13px; font-weight:500; box-shadow:0 1px 2px rgba(0,0,0,.12); transition:background .15s,border-color .15s; }
+    .theme-toggle-floating { position:fixed; top:10px; right:14px; z-index:1100; }
+    .theme-toggle:hover { background:#f0f6ff; }
     .summary { display:flex; gap:12px; flex-wrap:wrap; padding:12px 24px; justify-content:center; }
     .badge { border:1px solid #3332; border-radius:999px; padding:6px 14px; cursor:pointer; font-size:13px; background:#fff; }
     .badge[data-status="PASSED"] { background:#d4f7d9; }
@@ -651,6 +655,57 @@ def pytest_sessionfinish(session, exitstatus):
     /* Epic & Story heading sizing/alignment */
     .group-section h2.toggle { font-size:20px !important; text-align:left !important; padding:0 24px; }
     .story-block h3.toggle { font-size:18px !important; text-align:left !important; padding:0 28px; }
+
+    /* ---------------- DARK THEME (activated via body.theme-dark) ---------------- */
+    body.theme-dark { background:#1f2530; color:#d8dee6; }
+    body.theme-dark header { background:#263040; color:#fff; }
+    body.theme-dark .theme-toggle { background:#324054; border-color:#44556b; color:#e2ecf5; }
+    body.theme-dark .theme-toggle:hover { background:#3a4b60; }
+    body.theme-dark table { background:#27313f; }
+    body.theme-dark th { background:#324054; color:#dfe6ee; }
+    body.theme-dark th, body.theme-dark td { border-color:#425264; }
+    /* Dark theme: color the Details column by status, matching status badge colors */
+    body.theme-dark tr.status-PASSED td.details { color:#61d088; }
+    body.theme-dark tr.status-FAILED td.details { color:#ff8d87; }
+    body.theme-dark tr.status-ERROR td.details { color:#ffb067; }
+    body.theme-dark tr.status-SKIPPED td.details { color:#e7d47a; }
+    body.theme-dark tr.status-XFAIL td.details, body.theme-dark tr.status-XPASS td.details { color:#b7a4ff; }
+    body.theme-dark .detail-row td { background:#2e3947; }
+    body.theme-dark .detail-card { background:#27313f; border-color:#425264; box-shadow:0 2px 4px -2px rgba(0,0,0,.55); }
+    body.theme-dark .errors-block { background:#3d2225; border-color:#a04444; }
+    body.theme-dark footer { background:#263040; color:#b9c3cf; border-top-color:#425264; }
+    body.theme-dark .badge { background:#324054; border-color:#4a5b6e; color:#d8dee6; }
+    body.theme-dark .badge[data-status="PASSED"] { background:#1f5a2c; color:#d9f6e0; }
+    body.theme-dark .badge[data-status="FAILED"] { background:#6a2320; color:#ffd9d8; }
+    body.theme-dark .badge[data-status="ERROR"] { background:#744417; color:#ffe0c2; }
+    body.theme-dark .badge[data-status="SKIPPED"] { background:#625815; color:#fff0b4; }
+    body.theme-dark .badge[data-status="XFAIL"], body.theme-dark .badge[data-status="XPASS"] { background:#483a6d; color:#e6dcff; }
+    body.theme-dark a, body.theme-dark .data-item .data-summary { color:#5aa9ff; }
+    body.theme-dark .data-item .data-details pre { background:#1f2530; border-color:#425264; }
+    body.theme-dark .run-info { color:#b9c3cf; }
+    body.theme-dark .story-block h3.toggle, body.theme-dark .group-section h2.toggle { color:#d8dee6; }
+    body.theme-dark .checks li.fail { color:#ffa8a4; }
+    body.theme-dark .checks li.pass { color:#7dd9a0; }
+    body.theme-dark .step-error { color:#ff9c96; }
+    body.theme-dark .summary { background:#0000; }
+    body.theme-dark .data-item .data-summary::before { color:#b9c3cf; }
+    body.theme-dark .collapsible > .toggle::before { color:#b9c3cf; }
+    body.theme-dark ::selection { background:#3b5169; color:#fff; }
+    body.theme-dark .detail-card.status-PASSED { border-left-color:#2e8b57; }
+    body.theme-dark .detail-card.status-FAILED { border-left-color:#d66560; }
+    body.theme-dark .detail-card.status-ERROR { border-left-color:#d28a3a; }
+    body.theme-dark .detail-card.status-SKIPPED { border-left-color:#c4a437; }
+    body.theme-dark .detail-card.status-XFAIL, body.theme-dark .detail-card.status-XPASS { border-left-color:#8d79d6; }
+    body.theme-dark .data-item .data-details pre { color:#d8dee6; }
+    body.theme-dark .errors-block h4 { color:#ffc5c2; }
+    body.theme-dark .st-PASSED { color:#61d088; }
+    body.theme-dark .st-FAILED { color:#ff8d87; }
+    body.theme-dark .st-ERROR { color:#ffb067; }
+    body.theme-dark .st-SKIPPED { color:#e7d47a; }
+    body.theme-dark .st-XFAIL, body.theme-dark .st-XPASS { color:#b7a4ff; }
+    /* Ensure badges remain clickable with good contrast */
+    body.theme-dark .badge:hover { filter:brightness(1.15); }
+    
     """
 
     def format_timeline(
@@ -909,6 +964,23 @@ def pytest_sessionfinish(session, exitstatus):
             )
 
     script_js = r"""
+function applyStoredTheme(){
+    // Default is dark; only switch to light if user explicitly saved 'light'
+    try{ const t = localStorage.getItem('checkmateTheme'); if(t==='light'){ document.body.classList.remove('theme-dark'); } else { document.body.classList.add('theme-dark'); }}catch(e){}
+    updateToggleLabel();
+}
+function toggleTheme(){
+    document.body.classList.toggle('theme-dark');
+    const isDark = document.body.classList.contains('theme-dark');
+    try{ localStorage.setItem('checkmateTheme', isDark? 'dark':'light'); }catch(e){}
+    updateToggleLabel();
+}
+function updateToggleLabel(){
+    const btn = document.getElementById('themeToggle');
+    if(!btn) return;
+    const dark = document.body.classList.contains('theme-dark');
+    btn.textContent = dark? 'Light theme' : 'Dark theme';
+}
 function filterStatusGroup(groupId, status) {
     const selector = 'tr.main-row[data-group="'+groupId+'"]';
     document.querySelectorAll(selector).forEach(tr=>{
@@ -921,6 +993,9 @@ function filterStatusGroup(groupId, status) {
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+    applyStoredTheme();
+    const toggleBtn = document.getElementById('themeToggle');
+    if(toggleBtn){ toggleBtn.addEventListener('click', toggleTheme); }
     document.querySelectorAll('.summary').forEach(sumEl=>{
         const groupId = sumEl.getAttribute('data-group');
         if(!groupId) return;
@@ -973,8 +1048,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
 <title>{esc_title}</title>
 <style>{css}</style>
 </head>
-<body>
-<header>{esc_title}</header>
+<body class='theme-dark'>
+<header><span class='title'>{esc_title}</span></header>
+<button id='themeToggle' class='theme-toggle theme-toggle-floating' type='button' aria-label='Toggle theme'>Dark theme</button>
 <div class='run-info'>
     <div>Start time: {start_time}</div>
     <div>End time: {end_time}</div>
