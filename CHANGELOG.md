@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Custom HTML report themes
 
+## [0.0.3a] - 2025-08-19
+
+### Added
+- Dark theme styling for HTML report.
+- Theme toggle button (floating) with localStorage persistence across sessions.
+
 ## [0.0.2a] - 2025-08-19
 
 ### Changed
