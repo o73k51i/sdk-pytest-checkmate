@@ -599,6 +599,23 @@ def pytest_sessionfinish(session, exitstatus):
     .data-item .data-summary::before { content:'▶'; display:inline-block; margin-right:4px; transition:transform .18s ease; }
     .data-item.expanded .data-summary::before { transform:rotate(90deg); }
     .data-item .data-details { margin:4px 0 0 18px; }
+    .data-item .data-details pre { 
+        max-width:100%;
+        box-sizing:border-box;
+        padding:8px 10px;
+        margin:4px 0;
+        border:1px solid #d0d7de;
+        background:#f6f8fa;
+        border-radius:4px;
+        font-size:12px;
+        line-height:1.4;
+        white-space:pre-wrap;
+        word-break:break-word;
+        overflow-x:auto;
+        overflow-y:auto;
+        max-height:340px;
+    }
+    .data-item .data-details pre { overflow-wrap:anywhere; }
     .errors-block { border:1px solid #e99; background:#ffecec; padding:8px 12px; margin-top:12px; border-radius:4px; }
     .errors-block h4 { margin:0 0 6px 0; color:#b30000; }
     footer { position:fixed; bottom:0; left:0; right:0; background:#e8f1ff; padding:8px 16px; font-size:12px; color:#555; text-align:center; border-top:1px solid #d0d7de; }
