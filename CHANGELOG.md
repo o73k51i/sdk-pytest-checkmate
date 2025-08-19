@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Custom HTML report themes
 
+## [0.0.2a] - 2025-08-19
+
+### Changed
+- HTML report footer simplified: removed display of raw invocation arguments (`Args:`) for a cleaner UI and to avoid leaking local run context.
+
+### Fixed
+- Data attachments (`add_data_report`) now stay within the detail card: long / wide JSON or string payloads are wrapped (`white-space: pre-wrap`, `word-break: break-word`) and constrained with a scrollable area (`max-height: 340px`) preventing horizontal page overflow.
+
 ## [0.0.1a] - 2025-08-18
 
 ### Added
