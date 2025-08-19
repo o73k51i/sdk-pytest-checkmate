@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Planned
 - Custom HTML report themes
 
+## [0.0.0a4] - 2025-08-19
+
+### Changed
+- Revised versioning approach: switched to 0.0.0aN pre-release tag pattern to better reflect early, unstable iteration cadence before first public minor (0.1.0).
+
+### Added
+- Display of pytest parametrization values in HTML report: each parametrized test invocation now shows its parameters inline in the test title (e.g. `Test with parametrize [id=2]`), improving traceability when multiple variants run.
+
+### Internal
+- No functional logic changes besides exposing collected `callspec.params` in results payload.
+
 ## [0.0.3a] - 2025-08-19
 
 ### Added
