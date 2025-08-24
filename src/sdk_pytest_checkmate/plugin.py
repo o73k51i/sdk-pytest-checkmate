@@ -93,7 +93,7 @@ class StepRecord:
         Args:
             error: Exception that occurred during step execution, or None if successful
         """
-        self.end = time.time()
+        self.end = time.monotonic()
         if error is not None:
             self.error = repr(error)
 
@@ -224,13 +224,13 @@ class _StepCtx:
         ctx = _get_ctx()
         seq = ctx.get("seq", 0)
         ctx["seq"] = seq + 1
-        rec = StepRecord(name=self.name, seq=seq, start=time.time(), end=None)
+        rec = StepRecord(name=self.name, seq=seq, start=time.monotonic(), end=None)
         ctx["steps"].append(rec)
         self._record = rec
 
     def __enter__(self):
         if self._record is not None:
-            self._record.start = time.time()
+            self._record.start = time.monotonic()
             self._record.end = None
         return self
 
@@ -321,7 +321,7 @@ def soft_assert(condition: bool, message: str | None = None) -> bool:
     seq = ctx.get("seq", 0)
     ctx["seq"] = seq + 1
     rec = SoftCheckRecord(
-        message=msg, passed=bool(condition), time=time.time(), seq=seq
+        message=msg, passed=bool(condition), time=time.monotonic(), seq=seq
     )
     ctx["soft_checks"].append(rec)
     if not condition:
@@ -383,7 +383,7 @@ def add_data_report(data: Any, label: str) -> DataRecord:
     ctx = _get_ctx()
     seq = ctx.get("seq", 0)
     ctx["seq"] = seq + 1
-    record = DataRecord(label=label, seq=seq, time=time.time(), payload=data)
+    record = DataRecord(label=label, seq=seq, time=time.monotonic(), payload=data)
     ctx["data_reports"].append(record)
     return record
 
@@ -778,34 +778,28 @@ def pytest_sessionfinish(session, exitstatus):
             if kind == "soft":
                 pre_items.append(render_check(obj))
             else:
-                pre_items.append(
-                    "<ul class='data-items'>" + render_data(obj) + "</ul>"
-                )
+                pre_items.append("<ul class='data-items'>" + render_data(obj) + "</ul>")
             pos += 1
 
         out: List[str] = ["<h4>Full details</h4>"]
         if pre_items:
-            out.append(
-                "<div class='pre-checks'>"
-                + "".join(pre_items)
-                + "</div>"
-            )
+            out.append("<div class='pre-checks'>" + "".join(pre_items) + "</div>")
 
         steps_markup: List[str] = []
         post_steps_items: List[str] = []
-        
+
         # Спочатку знаходимо всі кроки з їх часовими межами
         step_ranges = []
         for _, kind, obj in seq[pos:]:
             if kind == "step":
                 step_start = obj.get("start", 0)
-                step_end = obj.get("end", float('inf'))
+                step_end = obj.get("end", float("inf"))
                 step_ranges.append((step_start, step_end, obj))
-        
+
         # Групуємо елементи за кроками
         for step_start, step_end, step_obj in step_ranges:
             step_attachments = []
-            
+
             # Знаходимо елементи, які належать до цього кроку (між start і end)
             for _, kind, obj in seq[pos:]:
                 if kind != "step":
@@ -817,7 +811,7 @@ def pytest_sessionfinish(session, exitstatus):
                             step_attachments.append(
                                 "<ul class='data-items'>" + render_data(obj) + "</ul>"
                             )
-            
+
             steps_markup.append(
                 "<li>STEP: "
                 + esc(step_obj.get("name", ""))
@@ -826,12 +820,12 @@ def pytest_sessionfinish(session, exitstatus):
                 + "".join(step_attachments)
                 + "</li>"
             )
-        
+
         # Знаходимо елементи після всіх кроків
         last_step_end = 0
         if step_ranges:
             last_step_end = max(step_end for _, step_end, _ in step_ranges)
-        
+
         for _, kind, obj in seq[pos:]:
             if kind != "step":
                 element_time = obj.get("time", 0)
@@ -844,13 +838,11 @@ def pytest_sessionfinish(session, exitstatus):
                         )
 
         out.append("<ol class='steps'>" + "".join(steps_markup) + "</ol>")
-        
+
         # Додаємо елементи після кроків
         if post_steps_items:
             out.append(
-                "<div class='post-steps'>"
-                + "".join(post_steps_items)
-                + "</div>"
+                "<div class='post-steps'>" + "".join(post_steps_items) + "</div>"
             )
         return "".join(out)
 
