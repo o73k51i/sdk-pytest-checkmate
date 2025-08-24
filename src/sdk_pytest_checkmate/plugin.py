@@ -770,25 +770,24 @@ def pytest_sessionfinish(session, exitstatus):
                 + "</li></ul>"
             )
 
-        pre_checks: List[str] = []
-        pre_data_html: List[str] = []
+        pre_items: List[str] = []
         pos = 0
         while pos < len(seq) and seq[pos][1] != "step":
             kind = seq[pos][1]
             obj = seq[pos][2]
             if kind == "soft":
-                pre_checks.append(render_check(obj))
+                pre_items.append(render_check(obj))
             else:
-                pre_data_html.append(
+                pre_items.append(
                     "<ul class='data-items'>" + render_data(obj) + "</ul>"
                 )
             pos += 1
 
         out: List[str] = ["<h4>Full details</h4>"]
-        if pre_checks or pre_data_html:
+        if pre_items:
             out.append(
                 "<div class='pre-checks'>"
-                + "".join(pre_checks + pre_data_html)
+                + "".join(pre_items)
                 + "</div>"
             )
 
