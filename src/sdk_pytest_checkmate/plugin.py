@@ -1114,7 +1114,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(html_doc, encoding="utf-8")
         if terminal:
-            terminal.write_line(f"checkmate: wrote HTML report to {report_path}")
+            terminal.write_line(f"Checkmate HTML report to file://{report_path}")
     except Exception as exc:
         if terminal:
             terminal.write_line(
