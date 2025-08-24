@@ -8,9 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Custom HTML report themes
+- Add SQL query client with automatic logging
+- Add asynchronous HTTP client
+- Improve HTML report
 
-## [0.0.0a4] - 2025-08-19
+## [0.2.0a6] - 2025-08-24
+
+### Added
+- `create_http_client()` function for enhanced HTTP testing with automatic request/response logging
+- Complete module docstrings for improved code documentation
+- Enhanced API documentation in README with HTTP client examples
+
+### Changed
+- Updated module `__init__.py` with comprehensive documentation including HTTP client usage examples
+- Improved code documentation across all modules with detailed docstrings for classes and functions
+
+### Internal
+- Modified test modules to verify functionality
+
+## [0.1.0a4] - 2025-08-19
 
 ### Changed
 - Revised versioning approach: switched to 0.0.0aN pre-release tag pattern to better reflect early, unstable iteration cadence before first public minor (0.1.0).
