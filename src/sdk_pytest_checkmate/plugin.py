@@ -792,38 +792,66 @@ def pytest_sessionfinish(session, exitstatus):
             )
 
         steps_markup: List[str] = []
-        current_step: Dict[str, Any] | None = None
-        attachments: List[str] = []
+        post_steps_items: List[str] = []
+        
+        # Спочатку знаходимо всі кроки з їх часовими межами
+        step_ranges = []
         for _, kind, obj in seq[pos:]:
             if kind == "step":
-                if current_step is not None:
-                    steps_markup.append(
-                        "<li>STEP: "
-                        + esc(current_step.get("name", ""))
-                        + fmt_duration(current_step)
-                        + ""
-                        + "".join(attachments)
-                        + "</li>"
-                    )
-                current_step = obj
-                attachments = []
-            elif kind == "soft":
-                attachments.append(render_check(obj))
-            else:
-                attachments.append(
-                    "<ul class='data-items'>" + render_data(obj) + "</ul>"
-                )
-        if current_step is not None:
+                step_start = obj.get("start", 0)
+                step_end = obj.get("end", float('inf'))
+                step_ranges.append((step_start, step_end, obj))
+        
+        # Групуємо елементи за кроками
+        for step_start, step_end, step_obj in step_ranges:
+            step_attachments = []
+            
+            # Знаходимо елементи, які належать до цього кроку (між start і end)
+            for _, kind, obj in seq[pos:]:
+                if kind != "step":
+                    element_time = obj.get("time", 0)
+                    if step_start <= element_time <= step_end:
+                        if kind == "soft":
+                            step_attachments.append(render_check(obj))
+                        else:
+                            step_attachments.append(
+                                "<ul class='data-items'>" + render_data(obj) + "</ul>"
+                            )
+            
             steps_markup.append(
                 "<li>STEP: "
-                + esc(current_step.get("name", ""))
-                + fmt_duration(current_step)
+                + esc(step_obj.get("name", ""))
+                + fmt_duration(step_obj)
                 + ""
-                + "".join(attachments)
+                + "".join(step_attachments)
                 + "</li>"
             )
+        
+        # Знаходимо елементи після всіх кроків
+        last_step_end = 0
+        if step_ranges:
+            last_step_end = max(step_end for _, step_end, _ in step_ranges)
+        
+        for _, kind, obj in seq[pos:]:
+            if kind != "step":
+                element_time = obj.get("time", 0)
+                if element_time > last_step_end:
+                    if kind == "soft":
+                        post_steps_items.append(render_check(obj))
+                    else:
+                        post_steps_items.append(
+                            "<ul class='data-items'>" + render_data(obj) + "</ul>"
+                        )
 
         out.append("<ol class='steps'>" + "".join(steps_markup) + "</ol>")
+        
+        # Додаємо елементи після кроків
+        if post_steps_items:
+            out.append(
+                "<div class='post-steps'>"
+                + "".join(post_steps_items)
+                + "</div>"
+            )
         return "".join(out)
 
     def format_errors(r: Dict[str, Any]) -> str:
