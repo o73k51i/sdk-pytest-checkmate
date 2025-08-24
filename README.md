@@ -11,6 +11,7 @@ A pytest plugin for enriched HTML test reporting with support for test steps, so
 - 🔄 **Test Steps**: Record named steps with timing using context managers
 - 🔍 **Soft Assertions**: Non-fatal assertions that collect failures without stopping tests
 - 📊 **Data Attachments**: Attach arbitrary data objects to test timelines
+- 🌐 **HTTP Client Logging**: Enhanced HTTP client with automatic request/response capture
 - 📋 **Epic/Story Grouping**: Organize tests with `@pytest.mark.epic` and `@pytest.mark.story`
 - 📈 **Interactive HTML Reports**: Rich reports with filtering, collapsible sections, and inline data
 - ⚡ **Async Support**: Works with both sync and async test functions
@@ -26,13 +27,16 @@ The plugin automatically activates when installed - no additional configuration 
 ## Quick Start
 
 ```python
-from sdk_pytest_checkmate import step, soft_assert, add_data_report
+from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client
 import pytest
 
 @pytest.mark.epic("User Management")
 @pytest.mark.story("User Registration")
 @pytest.mark.title("Complete user registration flow")
 def test_user_registration():
+    # Create HTTP client with automatic logging
+    client = create_http_client("https://api.example.com")
+    
     with step("Prepare test data"):
         user_data = {
             "username": "testuser",
@@ -42,17 +46,19 @@ def test_user_registration():
         add_data_report(user_data, "Registration Data")
     
     with step("Submit registration form"):
-        response = submit_registration(user_data)
+        response = client.post("/register", json=user_data)
         soft_assert(response.status_code == 201, "Registration should return 201")
         soft_assert("id" in response.json(), "Response should contain user ID")
     
     with step("Verify user activation"):
-        user = get_user_by_email(user_data["email"])
-        soft_assert(user.is_active, "User should be activated")
-        add_data_report(user.__dict__, "Created User")
+        user_response = client.get(f"/users/{response.json()['id']}")
+        soft_assert(user_response.status_code == 200, "User should be retrievable")
+        user = user_response.json()
+        soft_assert(user.get("is_active"), "User should be activated")
+        add_data_report(user, "Created User")
     
     # Final critical assertion
-    assert user.email == user_data["email"], "Email should match"
+    assert user["email"] == user_data["email"], "Email should match"
 ```
 
 ## Generating Reports
@@ -110,6 +116,43 @@ soft_assert(len(user.permissions) > 0, "User should have permissions")
 - `message`: Optional descriptive message (defaults to "Soft assertion")
 
 **Returns:** The boolean value of `condition`
+
+### create_http_client(base_url: str, **kwargs) -> ClientHttpCheckmate
+
+Create an enhanced HTTP client with automatic request/response logging.
+
+```python
+# Basic HTTP client
+client = create_http_client("https://api.example.com")
+
+# With custom headers and authentication
+client = create_http_client(
+    base_url="https://api.example.com",
+    headers={"User-Agent": "MyApp/1.0"},
+    timeout=30.0,
+    verify=True
+)
+
+# All HTTP requests are automatically logged
+response = client.get("/users/123")
+response = client.post("/users", json={"name": "John", "email": "john@example.com"})
+```
+
+**Parameters:**
+- `base_url`: Base URL for all HTTP requests
+- `headers`: Optional default headers to include with requests
+- `verify`: Whether to verify SSL certificates (default: True)
+- `timeout`: Request timeout in seconds (default: 10.0)
+- `auth`: Authentication handler (optional)
+- `**kwargs`: Additional arguments passed to httpx.Client
+
+**Returns:** Enhanced HTTP client that automatically logs all requests/responses to the test report
+
+The client logs comprehensive information for each request:
+- Request method, URL, headers, and body
+- Response status code, headers, and body
+- Response time in milliseconds
+- All data is automatically attached to the test timeline
 
 ### add_data_report(data: Any, label: str) -> DataRecord
 
