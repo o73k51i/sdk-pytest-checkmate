@@ -45,6 +45,7 @@ from __future__ import annotations
 import datetime as _dt
 import html
 import json as _json
+import os
 import pathlib as _pl
 import re
 import time
@@ -56,6 +57,51 @@ import pytest
 from pytest import StashKey
 
 __all__ = ["step", "soft_assert", "add_data_report"]
+
+
+def _load_env_file(file_path: str) -> bool:
+    """Load environment variables from a .env file.
+    
+    Args:
+        file_path: Path to the .env file
+        
+    Returns:
+        True if file was loaded successfully, False otherwise
+    """
+    try:
+        env_path = _pl.Path(file_path)
+        if not env_path.exists():
+            return False
+            
+        with open(env_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                
+                # Skip empty lines and comments
+                if not line or line.startswith('#'):
+                    continue
+                    
+                # Split on first '=' only
+                if '=' not in line:
+                    continue
+                    
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                # Remove quotes if present
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+                
+                # Only set if not already in environment
+                if key and key not in os.environ:
+                    os.environ[key] = value
+                    
+        return True
+    except Exception:
+        return False
 
 
 @dataclass
@@ -412,6 +458,13 @@ def pytest_addoption(parser):
         default=None,
         help="Path to write JSON results (optional).",
     )
+    g.addoption(
+        "--env-file",
+        action="store",
+        dest="env_file",
+        default=".env",
+        help="Path to .env file to load environment variables (default: .env)",
+    )
 
 
 def pytest_configure(config):
@@ -422,6 +475,11 @@ def pytest_configure(config):
     )
     config.stash[STASH_RESULTS] = []
     config._checkmate_start_time = time.time()
+    
+    # Load environment variables from .env file
+    env_file = config.getoption("env_file")
+    if env_file:
+        _load_env_file(env_file)
 
 
 @pytest.hookimpl(hookwrapper=True)
