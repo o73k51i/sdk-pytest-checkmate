@@ -12,6 +12,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add asynchronous HTTP client
 - Improve HTML report
 
+## [0.3.0a6] - 2025-08-25
+
+### Added
+- **Environment Variables Support**: Automatic loading of environment variables from `.env` files
+- New command line option `--env-file=PATH` to specify custom .env file path (default: `.env`)
+- Example `.env.example` file with common configuration patterns for API endpoints, database settings, feature flags, and test data
+- Environment variable documentation in README with usage examples and best practices
+
+### Enhanced
+- Comprehensive documentation updates with environment variable usage examples across README and module docstrings
+- Quick Start guide updated with environment-specific testing examples
+- Plugin documentation enhanced with .env file loading details and command-line usage
+
+### Internal
+- Added test coverage for environment variable functionality
+- Enhanced error handling for .env file loading with graceful fallbacks
+
+### Documentation
+- Added detailed environment variables section in README
+- Updated command-line options documentation
+- Enhanced examples showing integration with environment-specific configurations
+- Improved module docstrings with environment variable usage patterns
+
 ## [0.2.0a6] - 2025-08-24
 
 ### Added
