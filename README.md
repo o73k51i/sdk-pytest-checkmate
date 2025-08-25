@@ -12,6 +12,7 @@ A pytest plugin for enriched HTML test reporting with support for test steps, so
 - 🔍 **Soft Assertions**: Non-fatal assertions that collect failures without stopping tests
 - 📊 **Data Attachments**: Attach arbitrary data objects to test timelines
 - 🌐 **HTTP Client Logging**: Enhanced HTTP client with automatic request/response capture
+- 🌍 **Environment Variables**: Automatic loading of .env files for test configuration
 - 📋 **Epic/Story Grouping**: Organize tests with `@pytest.mark.epic` and `@pytest.mark.story`
 - 📈 **Interactive HTML Reports**: Rich reports with filtering, collapsible sections, and inline data
 - ⚡ **Async Support**: Works with both sync and async test functions
@@ -27,6 +28,7 @@ The plugin automatically activates when installed - no additional configuration 
 ## Quick Start
 
 ```python
+import os
 from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client
 import pytest
 
@@ -34,8 +36,11 @@ import pytest
 @pytest.mark.story("User Registration")
 @pytest.mark.title("Complete user registration flow")
 def test_user_registration():
+    # Use environment variables for configuration
+    api_base = os.environ.get('API_BASE_URL', 'https://api.example.com')
+    
     # Create HTTP client with automatic logging
-    client = create_http_client("https://api.example.com")
+    client = create_http_client(api_base)
     
     with step("Prepare test data"):
         user_data = {
@@ -44,6 +49,7 @@ def test_user_registration():
             "password": "secure123"
         }
         add_data_report(user_data, "Registration Data")
+        add_data_report({'api_url': api_base}, "Test Configuration")
     
     with step("Submit registration form"):
         response = client.post("/register", json=user_data)
@@ -66,14 +72,20 @@ def test_user_registration():
 Generate an HTML report with your test results:
 
 ```bash
-# Basic HTML report
+# Basic HTML report with automatic .env loading
 pytest --report-html=report.html
 
 # Custom title and JSON export
 pytest --report-html=results.html --report-title="My Test Suite" --report-json=results.json
 
-# Run specific tests with reporting
-pytest tests/test_integration.py --report-html=integration-report.html
+# Use custom environment file
+pytest --env-file=staging.env --report-html=staging-report.html
+
+# Run specific tests with environment configuration
+pytest tests/test_integration.py --env-file=integration.env --report-html=integration-report.html
+
+# Disable .env file loading
+pytest --env-file= --report-html=report.html
 ```
 
 ## API Reference
@@ -225,6 +237,117 @@ def test_remove_item_from_cart():
 - `--report-html[=PATH]`: Generate HTML report (default: `report.html`)
 - `--report-title=TITLE`: Set custom title for HTML report (default: "Pytest report")
 - `--report-json=PATH`: Export results as JSON file
+- `--env-file=PATH`: Load environment variables from .env file (default: `.env`)
+
+## Environment Variables
+
+The plugin supports automatic loading of environment variables from `.env` files. This is useful for:
+- API endpoints and credentials for integration tests
+- Test configuration parameters
+- Feature flags and environment-specific settings
+
+### Basic Usage
+
+Create a `.env` file in your project root:
+
+```env
+# API Configuration
+API_BASE_URL=https://api.example.com
+API_KEY=your-api-key-here
+API_TIMEOUT=30
+
+# Database Settings
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=test_database
+
+# Feature Flags
+FEATURE_ANALYTICS=enabled
+DEBUG_MODE=true
+```
+
+The `.env` file is loaded automatically when running tests:
+
+```bash
+# Uses .env file automatically
+pytest --report-html=report.html
+
+# Use custom .env file
+pytest --env-file=staging.env --report-html=report.html
+
+# Disable .env loading
+pytest --env-file= --report-html=report.html
+```
+
+### Using Environment Variables in Tests
+
+```python
+import os
+from sdk_pytest_checkmate import step, add_data_report, create_http_client
+
+def test_api_with_env_config():
+    # Environment variables are automatically available
+    api_url = os.environ.get('API_BASE_URL', 'https://default.api.com')
+    api_key = os.environ.get('API_KEY')
+    timeout = int(os.environ.get('API_TIMEOUT', '10'))
+    
+    with step("Setup API client with environment config"):
+        client = create_http_client(
+            base_url=api_url,
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=timeout
+        )
+        
+        # Log configuration for debugging
+        add_data_report({
+            'api_url': api_url,
+            'timeout': timeout,
+            'has_api_key': bool(api_key)
+        }, "API Configuration")
+    
+    with step("Test API endpoint"):
+        response = client.get('/health')
+        assert response.status_code == 200
+```
+
+### Environment-Specific Configuration
+
+Create different `.env` files for different environments:
+
+```bash
+# Development environment
+pytest --env-file=dev.env
+
+# Staging environment  
+pytest --env-file=staging.env
+
+# Production-like testing
+pytest --env-file=production.env
+```
+
+### .env File Format
+
+The plugin supports standard `.env` file format:
+
+```env
+# Comments are supported
+KEY=value
+QUOTED_VALUE="value with spaces"
+SINGLE_QUOTED='another value'
+
+# Empty lines are ignored
+
+# Special characters in values
+PASSWORD="p@ssw0rd!#$"
+URL=https://api.example.com/v1
+```
+
+**Important Notes:**
+- Environment variables already set in the system take precedence over `.env` file values
+- If the specified `.env` file doesn't exist, tests continue normally without errors
+- Sensitive data in `.env` files should not be committed to version control
+- Use `.env.example` files to document required environment variables
+
 
 ## HTML Report Features
 

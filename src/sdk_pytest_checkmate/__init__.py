@@ -6,6 +6,7 @@ This plugin extends pytest with enhanced reporting capabilities including:
 - **Soft Assertions**: Non-fatal assertions that collect failures without stopping tests
 - **Data Attachments**: Attach arbitrary data objects to test timelines
 - **HTTP Client Logging**: Automatic capture of HTTP requests/responses with detailed metrics
+- **Environment Variables**: Automatic loading of .env files for test configuration
 - **Epic/Story Grouping**: Organize tests with @pytest.mark.epic and @pytest.mark.story
 - **Interactive HTML Reports**: Rich reports with filtering, collapsible sections, and inline data
 
@@ -13,15 +14,18 @@ Quick Start:
     Install the plugin and use the main functions in your tests:
 
     ```python
+    import os
     from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client
 
     def test_user_workflow():
-        # Create HTTP client with automatic logging
-        client = create_http_client("https://api.example.com")
+        # Use environment variables for configuration
+        api_url = os.environ.get('API_BASE_URL', 'https://api.example.com')
+        client = create_http_client(api_url)
 
         with step("Setup user data"):
             user = create_test_user()
             add_data_report(user.__dict__, "Test User")
+            add_data_report({'api_url': api_url}, "Configuration")
 
         with step("Login process"):
             login_response = client.post("/login", json={"username": user.username, "password": user.password})
@@ -33,9 +37,13 @@ Quick Start:
             add_data_report(dashboard_response.json(), "Dashboard Data")
     ```
 
-    Generate reports:
+    Generate reports with environment configuration:
     ```bash
+    # Basic report with automatic .env loading
     pytest --report-html=report.html --report-title="My Test Suite"
+    
+    # Custom environment file
+    pytest --env-file=staging.env --report-html=staging-report.html
     ```
 
 Functions:
@@ -43,6 +51,12 @@ Functions:
     soft_assert(condition, message=None): Non-fatal assertion that continues test execution
     add_data_report(data, label): Attach arbitrary data to the test timeline
     create_http_client(base_url, **kwargs): Create HTTP client with automatic request/response logging
+
+Command Line Options:
+    --env-file=PATH: Load environment variables from .env file (default: .env)
+    --report-html=PATH: Generate HTML report (default: report.html)
+    --report-title=TITLE: Set custom title for HTML report
+    --report-json=PATH: Export results as JSON file
 
 Markers:
     @pytest.mark.title(name): Set human-friendly test title

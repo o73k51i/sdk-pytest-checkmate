@@ -4,6 +4,7 @@ A pytest plugin for enriched HTML test reporting with support for:
 - Test steps with timing information
 - Soft assertions that don't immediately fail tests
 - Arbitrary data attachments to test timelines
+- Automatic .env file loading for test configuration
 - Epic and story grouping with markers
 - Rich HTML reports with interactive filtering
 
@@ -12,13 +13,19 @@ The plugin automatically activates when installed and provides three main functi
 - soft_assert(): Non-fatal assertions collected for later evaluation
 - add_data_report(): Attach arbitrary data to test timeline
 
+Environment variables can be loaded from .env files using the --env-file option.
+
 Example:
     Basic usage in a test:
 
     ```python
+    import os
+    
     def test_login_flow():
+        api_url = os.environ.get('API_URL', 'https://default.api.com')
+        
         with step("Navigate to login page"):
-            driver.get("/login")
+            driver.get(f"{api_url}/login")
 
         with step("Enter credentials"):
             driver.find_element("username").send_keys("user")
@@ -29,14 +36,14 @@ Example:
         with step("Submit login"):
             login_button.click()
 
-        add_data_report({"user": "testuser", "timestamp": time.time()}, "Login Data")
+        add_data_report({"user": "testuser", "api_url": api_url}, "Login Data")
 
         assert "Dashboard" in driver.title
     ```
 
-    Generate HTML report:
+    Generate HTML report with environment configuration:
     ```bash
-    pytest --report-html=report.html --report-title="My Test Report"
+    pytest --env-file=staging.env --report-html=report.html --report-title="My Test Report"
     ```
 """
 
@@ -45,6 +52,7 @@ from __future__ import annotations
 import datetime as _dt
 import html
 import json as _json
+import os
 import pathlib as _pl
 import re
 import time
@@ -56,6 +64,51 @@ import pytest
 from pytest import StashKey
 
 __all__ = ["step", "soft_assert", "add_data_report"]
+
+
+def _load_env_file(file_path: str) -> bool:
+    """Load environment variables from a .env file.
+    
+    Args:
+        file_path: Path to the .env file
+        
+    Returns:
+        True if file was loaded successfully, False otherwise
+    """
+    try:
+        env_path = _pl.Path(file_path)
+        if not env_path.exists():
+            return False
+            
+        with open(env_path, 'r', encoding='utf-8') as f:
+            for line_num, line in enumerate(f, 1):
+                line = line.strip()
+                
+                # Skip empty lines and comments
+                if not line or line.startswith('#'):
+                    continue
+                    
+                # Split on first '=' only
+                if '=' not in line:
+                    continue
+                    
+                key, value = line.split('=', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                # Remove quotes if present
+                if value.startswith('"') and value.endswith('"'):
+                    value = value[1:-1]
+                elif value.startswith("'") and value.endswith("'"):
+                    value = value[1:-1]
+                
+                # Only set if not already in environment
+                if key and key not in os.environ:
+                    os.environ[key] = value
+                    
+        return True
+    except Exception:
+        return False
 
 
 @dataclass
@@ -412,6 +465,13 @@ def pytest_addoption(parser):
         default=None,
         help="Path to write JSON results (optional).",
     )
+    g.addoption(
+        "--env-file",
+        action="store",
+        dest="env_file",
+        default=".env",
+        help="Path to .env file to load environment variables (default: .env)",
+    )
 
 
 def pytest_configure(config):
@@ -422,6 +482,11 @@ def pytest_configure(config):
     )
     config.stash[STASH_RESULTS] = []
     config._checkmate_start_time = time.time()
+    
+    # Load environment variables from .env file
+    env_file = config.getoption("env_file")
+    if env_file:
+        _load_env_file(env_file)
 
 
 @pytest.hookimpl(hookwrapper=True)
