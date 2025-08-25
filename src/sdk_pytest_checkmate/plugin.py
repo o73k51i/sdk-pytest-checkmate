@@ -4,6 +4,7 @@ A pytest plugin for enriched HTML test reporting with support for:
 - Test steps with timing information
 - Soft assertions that don't immediately fail tests
 - Arbitrary data attachments to test timelines
+- Automatic .env file loading for test configuration
 - Epic and story grouping with markers
 - Rich HTML reports with interactive filtering
 
@@ -12,13 +13,19 @@ The plugin automatically activates when installed and provides three main functi
 - soft_assert(): Non-fatal assertions collected for later evaluation
 - add_data_report(): Attach arbitrary data to test timeline
 
+Environment variables can be loaded from .env files using the --env-file option.
+
 Example:
     Basic usage in a test:
 
     ```python
+    import os
+    
     def test_login_flow():
+        api_url = os.environ.get('API_URL', 'https://default.api.com')
+        
         with step("Navigate to login page"):
-            driver.get("/login")
+            driver.get(f"{api_url}/login")
 
         with step("Enter credentials"):
             driver.find_element("username").send_keys("user")
@@ -29,14 +36,14 @@ Example:
         with step("Submit login"):
             login_button.click()
 
-        add_data_report({"user": "testuser", "timestamp": time.time()}, "Login Data")
+        add_data_report({"user": "testuser", "api_url": api_url}, "Login Data")
 
         assert "Dashboard" in driver.title
     ```
 
-    Generate HTML report:
+    Generate HTML report with environment configuration:
     ```bash
-    pytest --report-html=report.html --report-title="My Test Report"
+    pytest --env-file=staging.env --report-html=report.html --report-title="My Test Report"
     ```
 """
 
