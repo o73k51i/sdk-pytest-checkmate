@@ -30,7 +30,9 @@ The plugin automatically activates when installed - no additional configuration 
 
 ```python
 import os
+
 from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client, soft_validate_json
+
 import pytest
 
 @pytest.mark.epic("User Management")

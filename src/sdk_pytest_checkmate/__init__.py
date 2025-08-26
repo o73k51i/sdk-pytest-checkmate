@@ -16,6 +16,7 @@ Quick Start:
 
     ```python
     import os
+    
     from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client, soft_validate_json
 
     def test_user_workflow():
@@ -68,6 +69,12 @@ Functions:
     add_data_report(data, label): Attach arbitrary data to the test timeline
     create_http_client(base_url, **kwargs): Create HTTP client with automatic request/response logging
     soft_validate_json(data, *, schema=None, schema_path=None): Validate JSON data against schema using soft assertion
+
+Command Line Options:
+    --env-file=PATH: Load environment variables from .env file (default: .env)
+    --report-html=PATH: Generate HTML report (default: report.html)
+    --report-title=TITLE: Set custom title for HTML report
+    --report-json=PATH: Export results as JSON file
 
 Command Line Options:
     --env-file=PATH: Load environment variables from .env file (default: .env)
