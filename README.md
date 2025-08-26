@@ -10,7 +10,8 @@ A pytest plugin for enriched HTML test reporting with support for test steps, so
 
 - 🔄 **Test Steps**: Record named steps with timing using context managers
 - 🔍 **Soft Assertions**: Non-fatal assertions that collect failures without stopping tests
-- 📊 **Data Attachments**: Attach arbitrary data objects to test timelines
+- � **JSON Schema Validation**: Validate JSON data against schemas with soft assertions
+- �📊 **Data Attachments**: Attach arbitrary data objects to test timelines
 - 🌐 **HTTP Client Logging**: Enhanced HTTP client with automatic request/response capture
 - 🌍 **Environment Variables**: Automatic loading of .env files for test configuration
 - 📋 **Epic/Story Grouping**: Organize tests with `@pytest.mark.epic` and `@pytest.mark.story`
@@ -29,7 +30,9 @@ The plugin automatically activates when installed - no additional configuration 
 
 ```python
 import os
-from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client
+
+from sdk_pytest_checkmate import step, soft_assert, add_data_report, create_http_client, soft_validate_json
+
 import pytest
 
 @pytest.mark.epic("User Management")
@@ -62,6 +65,19 @@ def test_user_registration():
         user = user_response.json()
         soft_assert(user.get("is_active"), "User should be activated")
         add_data_report(user, "Created User")
+        
+        # Validate user data structure with JSON Schema
+        user_schema = {
+            "type": "object",
+            "properties": {
+                "id": {"type": "integer"},
+                "username": {"type": "string"},
+                "email": {"type": "string", "format": "email"},
+                "is_active": {"type": "boolean"}
+            },
+            "required": ["id", "username", "email"]
+        }
+        soft_validate_json(user, schema=user_schema)
     
     # Final critical assertion
     assert user["email"] == user_data["email"], "Email should match"
@@ -189,6 +205,36 @@ add_data_report(user_profile.__dict__, "User Profile")
 **Parameters:**
 - `data`: Any Python object (dict/list will be pretty-printed as JSON)
 - `label`: Short label shown in the report UI
+
+### soft_validate_json(data: Any, *, schema: Dict[str, Any] = None, schema_path: str | Path = None) -> None
+
+Validate JSON data against a JSON Schema specification using soft assertions.
+
+```python
+# Validate with inline schema
+user_schema = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "integer"},
+        "username": {"type": "string"},
+        "email": {"type": "string", "format": "email"},
+        "is_active": {"type": "boolean"}
+    },
+    "required": ["id", "username", "email"]
+}
+
+# Validate API response data
+user_data = response.json()
+soft_validate_json(user_data, schema=user_schema)
+
+# Validate using external schema file
+soft_validate_json(user_data, schema_path="schemas/user.json")
+```
+
+**Parameters:**
+- `data`: Any JSON-serializable Python object to validate (dict, list, str, int, float, bool, None)
+- `schema`: JSON Schema as a dictionary (optional, mutually exclusive with schema_path)
+- `schema_path`: Path to a JSON Schema file (optional, used if schema is not provided)
 
 ## Markers
 
