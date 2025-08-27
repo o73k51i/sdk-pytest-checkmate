@@ -2,7 +2,7 @@
 
 from ._core import add_data_report, soft_assert, step
 from ._http_client import async_create_http_client, create_http_client
-from ._json_validator import soft_validate_json, validate_json_strict
+from ._json_validator import soft_validate_json
 
 __all__ = [
     "add_data_report",
@@ -11,5 +11,4 @@ __all__ = [
     "soft_assert",
     "soft_validate_json",
     "step",
-    "validate_json_strict",
 ]
