@@ -2,9 +2,8 @@
 
 import json
 
-from httpx import URL, AsyncClient, Auth, Client, Response
+from httpx import URL, AsyncClient, Client, Response
 
-from ._constants import DEFAULT_TIMEOUT
 from ._core import add_data_report
 from ._types import AnyType, JsonData
 
@@ -64,7 +63,7 @@ def _create_request_log(response: Response) -> dict[str, AnyType]:
     }
 
 
-class CheckmateHttpClient(Client):
+class HttpClient(Client):
     """Enhanced HTTP client that automatically logs requests and responses.
 
     This client extends httpx.Client to provide automatic logging of all
@@ -92,7 +91,7 @@ class CheckmateHttpClient(Client):
         return response
 
 
-class CheckmateAsyncHttpClient(AsyncClient):
+class AsyncHttpClient(AsyncClient):
     """Enhanced async HTTP client that automatically logs requests and responses.
 
     This client extends httpx.AsyncClient to provide automatic logging of all
@@ -118,75 +117,3 @@ class CheckmateAsyncHttpClient(AsyncClient):
         add_data_report(log_entry, label)
 
         return response
-
-
-def create_http_client(
-    base_url: str,
-    headers: dict[str, str] | None = None,
-    verify: bool = True,
-    timeout: float | int = DEFAULT_TIMEOUT,
-    auth: Auth | None = None,
-    **kwargs: AnyType,
-) -> CheckmateHttpClient:
-    """Create an enhanced HTTP client with automatic request/response logging.
-
-    Args:
-        base_url: Base URL for all HTTP requests.
-        headers: Optional default headers to include with requests.
-        verify: Whether to verify SSL certificates (default: True).
-        timeout: Request timeout in seconds.
-        auth: Authentication handler (optional).
-        **kwargs: Additional arguments passed to httpx.Client.
-
-    Returns:
-        An enhanced HTTP client that logs all requests/responses.
-
-    Example:
-        >>> client = create_http_client("https://api.example.com")
-        >>> response = client.get("/users/123")
-        >>> # Request/response details are automatically logged
-    """
-    return CheckmateHttpClient(
-        base_url=base_url,
-        headers=headers,
-        verify=verify,
-        timeout=timeout,
-        auth=auth,
-        **kwargs,
-    )
-
-
-def async_create_http_client(
-    base_url: str,
-    headers: dict[str, str] | None = None,
-    verify: bool = True,
-    timeout: float | int = DEFAULT_TIMEOUT,
-    auth: Auth | None = None,
-    **kwargs: AnyType,
-) -> CheckmateAsyncHttpClient:
-    """Create an enhanced async HTTP client with automatic request/response logging.
-
-    Args:
-        base_url: Base URL for all HTTP requests.
-        headers: Optional default headers to include with requests.
-        verify: Whether to verify SSL certificates (default: True).
-        timeout: Request timeout in seconds.
-        auth: Authentication handler (optional).
-        **kwargs: Additional arguments passed to httpx.AsyncClient.
-
-    Returns:
-        An enhanced async HTTP client that logs all requests/responses.
-
-    Example:
-        >>> client = async_create_http_client("https://api.example.com")
-        >>> response = await client.get("/users/123")
-        >>> # Request/response details are automatically logged
-    """
-    return CheckmateAsyncHttpClient(
-        base_url=base_url,
-        headers=headers,
-        verify=verify,
-        timeout=timeout,
-        auth=auth,
-        **kwargs,
-    )
