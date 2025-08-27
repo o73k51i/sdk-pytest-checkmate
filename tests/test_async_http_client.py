@@ -2,18 +2,17 @@
 
 from collections.abc import AsyncGenerator
 
-import httpx
 import pytest
 import pytest_asyncio
 
 from sdk_pytest_checkmate import soft_assert, step
-from sdk_pytest_checkmate._http_client import async_create_http_client
+from sdk_pytest_checkmate._http_client import AsyncHttpClient
 
 
 @pytest_asyncio.fixture
-async def async_http_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+async def async_http_client() -> AsyncGenerator[AsyncHttpClient, None]:
     """Fixture providing an async HTTP client for httpbin.org."""
-    client = async_create_http_client("https://httpbin.org")
+    client = AsyncHttpClient(base_url="https://httpbin.org")
     yield client
     await client.aclose()
 
@@ -27,7 +26,7 @@ class TestAsyncHttpClient:
     @pytest.mark.asyncio
     async def test_async_http_client_simple(self) -> None:
         """Test simple async HTTP client POST request without steps."""
-        client = async_create_http_client("https://httpbin.org")
+        client = AsyncHttpClient(base_url="https://httpbin.org")
         response = await client.post("/post", json={"key": "value"})
         soft_assert(response.status_code == 200, "POST request should succeed")
         await client.aclose()
@@ -36,7 +35,7 @@ class TestAsyncHttpClient:
     @pytest.mark.asyncio
     async def test_async_http_client_sequential_requests(self) -> None:
         """Test async HTTP client with sequential GET and POST requests using step context managers."""
-        client = async_create_http_client("https://httpbin.org")
+        client = AsyncHttpClient(base_url="https://httpbin.org")
         with step("GET /get request"):
             response = await client.get("/get", params={"param1": "value1"})
             soft_assert(response.status_code == 200, "GET request should succeed")
@@ -47,7 +46,7 @@ class TestAsyncHttpClient:
 
     @pytest.mark.title("Async HTTP Client Test with Fixture")
     @pytest.mark.asyncio
-    async def test_async_http_client_fixture(self, async_http_client: httpx.AsyncClient) -> None:
+    async def test_async_http_client_fixture(self, async_http_client: AsyncHttpClient) -> None:
         """Test async HTTP client using session-scoped fixture with step context manager."""
         with step("GET /get request"):
             response = await async_http_client.get("/get", params={"param1": "value1"})
