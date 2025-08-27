@@ -86,7 +86,6 @@ def format_timeline(
         message = escape_html(chk.get("message", ""))
         details = chk.get("details")
 
-        # Format details for display
         details_html = ""
         if details is not None:
             details_text = "\n".join(str(item) for item in details) if isinstance(details, list) else str(details)

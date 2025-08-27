@@ -123,7 +123,6 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
     """
     msg = message or "Soft assertion"
 
-    # If details is not provided, analyze the condition and show actual values
     if details is None:
         import ast
         import inspect
@@ -141,11 +140,9 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
             try:
                 lines = Path(filename).read_text(encoding="utf-8").splitlines()
                 if 0 <= lineno - 1 < len(lines):
-                    # Handle multi-line calls by joining lines until we have a complete expression
                     current_line = lineno - 1
                     line_content = ""
 
-                    # Look for the start of soft_assert call
                     while current_line >= 0:
                         current_text = lines[current_line].strip()
                         line_content = current_text + " " + line_content
@@ -153,7 +150,6 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
                             break
                         current_line -= 1
 
-                    # Continue reading lines until we have a complete call
                     next_line = lineno
                     while next_line < len(lines):
                         if line_content.count("(") <= line_content.count(")"):
@@ -161,17 +157,14 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
                         line_content += " " + lines[next_line].strip()
                         next_line += 1
 
-                    # Extract the condition using better parsing
                     condition_str = None
 
-                    # Try to find soft_assert with balanced parentheses
                     match = re.search(r"soft_assert\s*\(", line_content)
                     if match:
                         start_pos = match.end() - 1  # Position of opening parenthesis
                         paren_count = 0
                         i = start_pos
 
-                        # Find the matching closing parenthesis for the soft_assert call
                         while i < len(line_content):
                             if line_content[i] == "(":
                                 paren_count += 1
@@ -182,17 +175,13 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
                             i += 1
 
                         if paren_count == 0:
-                            # Extract the full arguments
                             args_content = line_content[start_pos + 1 : i]
 
-                            # Parse arguments to find the first one (condition)
                             try:
-                                # Use AST to parse the arguments safely
                                 args_ast = ast.parse(f"f({args_content})", mode="eval")
                                 if isinstance(args_ast.body, ast.Call) and args_ast.body.args:
                                     condition_str = ast.unparse(args_ast.body.args[0])
                             except Exception:
-                                # Fallback: try to find first comma outside of nested structures
                                 bracket_count = 0
                                 paren_count = 0
                                 brace_count = 0
@@ -230,24 +219,19 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
                                     condition_str = args_content.strip()
 
                     if condition_str:
-                        # Try to evaluate the condition parts to show actual values
                         try:
-                            # Parse the condition as an AST to analyze it
                             tree = ast.parse(condition_str, mode="eval")
 
-                            # Check if it's a comparison
                             if isinstance(tree.body, ast.Compare):
                                 comp = tree.body
                                 left_code = ast.unparse(comp.left)
 
-                                # Evaluate left side
                                 try:
                                     left_value = eval(left_code, frame_globals, frame_locals)  # noqa: S307
                                     left_repr = repr(left_value)
                                 except Exception:
                                     left_repr = left_code
 
-                                # Handle comparisons
                                 if comp.ops and comp.comparators:
                                     op = comp.ops[0]
                                     right_code = ast.unparse(comp.comparators[0])
@@ -258,7 +242,6 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
                                     except Exception:
                                         right_repr = right_code
 
-                                    # Convert operator to string
                                     op_map = {
                                         ast.Gt: ">",
                                         ast.Lt: "<",
@@ -277,7 +260,6 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
                                 else:
                                     details = condition_str
                             else:
-                                # For non-comparison expressions, try to show the evaluated result
                                 try:
                                     result = eval(condition_str, frame_globals, frame_locals)  # noqa: S307
                                     details = f"{condition_str} (evaluates to {result!r})"
