@@ -97,7 +97,7 @@ def step(name: str) -> StepContext:
     return StepContext(name)
 
 
-def soft_assert(condition: bool, message: str | None = None) -> bool:
+def soft_assert(condition: bool, message: str | None = None, details: str | list[str] | None = None) -> bool:
     """Record a non-fatal assertion that doesn't immediately fail the test.
 
     Soft assertions allow tests to continue execution even when some
@@ -107,16 +107,194 @@ def soft_assert(condition: bool, message: str | None = None) -> bool:
         condition: The boolean condition to check.
         message: Optional descriptive message for the assertion.
                 Defaults to "Soft assertion" if not provided.
+        details: Optional details for the assertion. If not provided,
+                the condition will be analyzed and shown with actual values.
+                Can be a string or list of strings.
 
     Returns:
         The boolean value of the condition.
 
     Example:
         >>> soft_assert(user.name is not None, "User should have a name")
-        >>> soft_assert(user.email.endswith("@company.com"), "Email should be company domain")
+        >>> soft_assert(user.email.endswith("@company.com"), "Email should be company domain",
+        ...            details="Checking domain validation rules")
+        >>> soft_assert(len(items) > 0, "Items list should not be empty",
+        ...            details=["List length check", "Validation step 1"])
     """
     msg = message or "Soft assertion"
-    add_soft_check_record(msg, bool(condition))
+
+    # If details is not provided, analyze the condition and show actual values
+    if details is None:
+        import ast
+        import inspect
+        import re
+        from pathlib import Path
+
+        frame = inspect.currentframe()
+        if frame and frame.f_back:
+            code = frame.f_back.f_code
+            filename = code.co_filename
+            lineno = frame.f_back.f_lineno
+            frame_locals = frame.f_back.f_locals
+            frame_globals = frame.f_back.f_globals
+
+            try:
+                lines = Path(filename).read_text(encoding="utf-8").splitlines()
+                if 0 <= lineno - 1 < len(lines):
+                    # Handle multi-line calls by joining lines until we have a complete expression
+                    current_line = lineno - 1
+                    line_content = ""
+
+                    # Look for the start of soft_assert call
+                    while current_line >= 0:
+                        current_text = lines[current_line].strip()
+                        line_content = current_text + " " + line_content
+                        if "soft_assert" in current_text:
+                            break
+                        current_line -= 1
+
+                    # Continue reading lines until we have a complete call
+                    next_line = lineno
+                    while next_line < len(lines):
+                        if line_content.count("(") <= line_content.count(")"):
+                            break
+                        line_content += " " + lines[next_line].strip()
+                        next_line += 1
+
+                    # Extract the condition using better parsing
+                    condition_str = None
+
+                    # Try to find soft_assert with balanced parentheses
+                    match = re.search(r"soft_assert\s*\(", line_content)
+                    if match:
+                        start_pos = match.end() - 1  # Position of opening parenthesis
+                        paren_count = 0
+                        i = start_pos
+
+                        # Find the matching closing parenthesis for the soft_assert call
+                        while i < len(line_content):
+                            if line_content[i] == "(":
+                                paren_count += 1
+                            elif line_content[i] == ")":
+                                paren_count -= 1
+                                if paren_count == 0:
+                                    break
+                            i += 1
+
+                        if paren_count == 0:
+                            # Extract the full arguments
+                            args_content = line_content[start_pos + 1 : i]
+
+                            # Parse arguments to find the first one (condition)
+                            try:
+                                # Use AST to parse the arguments safely
+                                args_ast = ast.parse(f"f({args_content})", mode="eval")
+                                if isinstance(args_ast.body, ast.Call) and args_ast.body.args:
+                                    condition_str = ast.unparse(args_ast.body.args[0])
+                            except Exception:
+                                # Fallback: try to find first comma outside of nested structures
+                                bracket_count = 0
+                                paren_count = 0
+                                brace_count = 0
+                                quote_char = None
+
+                                for j, char in enumerate(args_content):
+                                    if quote_char:
+                                        if char == quote_char and (j == 0 or args_content[j - 1] != "\\"):
+                                            quote_char = None
+                                    elif char in ('"', "'"):
+                                        quote_char = char
+                                    elif char == "[":
+                                        bracket_count += 1
+                                    elif char == "]":
+                                        bracket_count -= 1
+                                    elif char == "(":
+                                        paren_count += 1
+                                    elif char == ")":
+                                        paren_count -= 1
+                                    elif char == "{":
+                                        brace_count += 1
+                                    elif char == "}":
+                                        brace_count -= 1
+                                    elif (
+                                        char == ","
+                                        and bracket_count == 0
+                                        and paren_count == 0
+                                        and brace_count == 0
+                                        and not quote_char
+                                    ):
+                                        condition_str = args_content[:j].strip()
+                                        break
+
+                                if not condition_str:
+                                    condition_str = args_content.strip()
+
+                    if condition_str:
+                        # Try to evaluate the condition parts to show actual values
+                        try:
+                            # Parse the condition as an AST to analyze it
+                            tree = ast.parse(condition_str, mode="eval")
+
+                            # Check if it's a comparison
+                            if isinstance(tree.body, ast.Compare):
+                                comp = tree.body
+                                left_code = ast.unparse(comp.left)
+
+                                # Evaluate left side
+                                try:
+                                    left_value = eval(left_code, frame_globals, frame_locals)  # noqa: S307
+                                    left_repr = repr(left_value)
+                                except Exception:
+                                    left_repr = left_code
+
+                                # Handle comparisons
+                                if comp.ops and comp.comparators:
+                                    op = comp.ops[0]
+                                    right_code = ast.unparse(comp.comparators[0])
+
+                                    try:
+                                        right_value = eval(right_code, frame_globals, frame_locals)  # noqa: S307
+                                        right_repr = repr(right_value)
+                                    except Exception:
+                                        right_repr = right_code
+
+                                    # Convert operator to string
+                                    op_map = {
+                                        ast.Gt: ">",
+                                        ast.Lt: "<",
+                                        ast.GtE: ">=",
+                                        ast.LtE: "<=",
+                                        ast.Eq: "==",
+                                        ast.NotEq: "!=",
+                                        ast.Is: "is",
+                                        ast.IsNot: "is not",
+                                        ast.In: "in",
+                                        ast.NotIn: "not in",
+                                    }
+                                    op_str = op_map.get(type(op), str(type(op).__name__))
+
+                                    details = f"{condition_str} ({left_repr} {op_str} {right_repr})"
+                                else:
+                                    details = condition_str
+                            else:
+                                # For non-comparison expressions, try to show the evaluated result
+                                try:
+                                    result = eval(condition_str, frame_globals, frame_locals)  # noqa: S307
+                                    details = f"{condition_str} (evaluates to {result!r})"
+                                except Exception:
+                                    details = condition_str
+                        except Exception:
+                            details = condition_str
+                    else:
+                        details = str(condition)
+                else:
+                    details = str(condition)
+            except OSError:
+                details = str(condition)
+        else:
+            details = str(condition)
+
+    add_soft_check_record(msg, bool(condition), details)
     return bool(condition)
 
 
