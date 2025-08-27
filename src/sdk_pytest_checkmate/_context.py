@@ -60,12 +60,13 @@ def add_step_record(name: str) -> StepRecord:
     return record
 
 
-def add_soft_check_record(message: str, passed: bool) -> SoftCheckRecord:
+def add_soft_check_record(message: str, passed: bool, details: str | list[str] | None = None) -> SoftCheckRecord:
     """Add a soft check record to the current test context.
 
     Args:
         message: The assertion message.
         passed: Whether the assertion passed.
+        details: Optional details for the assertion.
 
     Returns:
         The created soft check record.
@@ -73,7 +74,7 @@ def add_soft_check_record(message: str, passed: bool) -> SoftCheckRecord:
     ctx = get_context()
     seq = _get_next_sequence_number(ctx)
     current_time = time.monotonic()
-    record = SoftCheckRecord(message=message, passed=passed, seq=seq, time=current_time)
+    record = SoftCheckRecord(message=message, passed=passed, details=details, seq=seq, time=current_time)
     ctx["soft_checks"].append(record)
     if not passed:
         ctx["soft_failures"].append(message)
