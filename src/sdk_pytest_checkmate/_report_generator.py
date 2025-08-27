@@ -83,13 +83,28 @@ def format_timeline(
     def render_check(chk: dict[str, Any]) -> str:
         cls = "pass" if chk.get("passed") else "fail"
         icon = "✔" if chk.get("passed") else "✖"
+        message = escape_html(chk.get("message", ""))
+        details = chk.get("details")
+
+        # Format details for display
+        details_html = ""
+        if details is not None:
+            details_text = "\n".join(str(item) for item in details) if isinstance(details, list) else str(details)
+            details_html = f"<div class='check-details hidden'><pre>{escape_html(details_text)}</pre></div>"
+
+        has_details = "true" if details is not None else "false"
+
         return (
             "<ul class='checks'><li class='"
             + cls
-            + "'>CHECK: "
+            + "'>CHECK: <span class='check-summary' data-has-details='"
+            + has_details
+            + "'>"
             + icon
             + " "
-            + escape_html(chk.get("message", ""))
+            + message
+            + "</span>"
+            + details_html
             + "</li></ul>"
         )
 
@@ -283,6 +298,8 @@ def get_html_css() -> str:
     .data-items .data-item { list-style:none; }
     .checks li.fail { color:#c40000; font-weight:600; }
     .checks li.pass { color:#1a7f37; }
+    .check-summary[data-has-details="true"] { cursor:pointer; text-decoration:underline; }
+    .check-details { margin-top:4px; }
     .step-error { color:#c40000; font-weight:600; }
     .data-item { margin:4px 0; }
     .data-item .data-summary { cursor:pointer; font-weight:500; color:#0366d6; }
@@ -464,6 +481,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
             if(!li) return;
             const details = li.querySelector('.data-details');
             if(details){ details.classList.toggle('hidden'); li.classList.toggle('expanded'); }
+        }
+        // Check details expand/collapse
+        if(t.classList.contains('check-summary') && t.dataset.hasDetails === 'true'){
+            const li = t.closest('li');
+            if(!li) return;
+            const details = li.querySelector('.check-details');
+            if(details){ details.classList.toggle('hidden'); }
         }
     });
 
