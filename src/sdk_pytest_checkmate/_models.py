@@ -76,6 +76,7 @@ class SoftCheckRecord(BaseRecord):
 
     message: str
     passed: bool
+    details: str | list[str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert the soft check record to a dictionary representation."""
