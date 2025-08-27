@@ -161,7 +161,7 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
 
                     match = re.search(r"soft_assert\s*\(", line_content)
                     if match:
-                        start_pos = match.end() - 1  # Position of opening parenthesis
+                        start_pos = match.end() - 1
                         paren_count = 0
                         i = start_pos
 
