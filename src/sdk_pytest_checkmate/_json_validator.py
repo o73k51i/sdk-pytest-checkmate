@@ -58,10 +58,10 @@ def _format_validation_errors(errors: list[ValidationError]) -> list[str]:
     Returns:
         List of formatted error messages.
     """
-    return [f"\t- ({'/'.join(str(p) for p in error.absolute_path)}) {error.message}" for error in errors]
+    return [f" - ({'/'.join(str(p) for p in error.absolute_path)}) {error.message}" for error in errors]
 
 
-def _validate_json_data(data: JsonData, schema: dict[str, Any]) -> tuple[bool, str]:
+def _validate_json_data(data: JsonData, schema: dict[str, Any]) -> tuple[bool, str, str | list[str] | None]:
     """Validate JSON data against a schema.
 
     Args:
@@ -78,43 +78,12 @@ def _validate_json_data(data: JsonData, schema: dict[str, Any]) -> tuple[bool, s
         validation_errors = list(validator.iter_errors(data))
         if validation_errors:
             formatted_errors = _format_validation_errors(validation_errors)
-            error_message = "JSON Schema validation failed:\n" + "\n".join(formatted_errors)
-            return (False, error_message)
+            error_message = "JSON Schema validation failed"
+            return (False, error_message, formatted_errors)
 
-        return (True, "JSON Schema validation passed")
+        return (True, "JSON Schema validation passed", None)
     except Exception as e:
-        return (False, f"JSON Schema validation error: {e}")
-
-
-def validate_json_strict(
-    data: JsonData,
-    *,
-    schema: dict[str, Any] | None = None,
-    schema_path: str | Path | None = None,
-) -> None:
-    """Validate JSON data against a schema with strict error handling.
-
-    Args:
-        data: The JSON data to validate.
-        schema: JSON Schema as a dictionary (optional).
-        schema_path: Path to a JSON Schema file (optional).
-
-    Raises:
-        ValueError: If no schema is provided.
-        JsonValidationError: If validation fails.
-    """
-    if schema is None and schema_path is not None:
-        schema = _load_json_schema(schema_path)
-
-    if schema is None:
-        raise ValueError(ERROR_NO_SCHEMA)
-
-    is_valid, error_message = _validate_json_data(data, schema)
-    if not is_valid:
-        validator_class = validators.validator_for(schema)
-        validator = validator_class(schema, registry=EMPTY_REGISTRY)
-        errors = _format_validation_errors(list(validator.iter_errors(data)))
-        raise JsonValidationError(error_message, errors)
+        return (False, "JSON Schema validation error", f"{e}")
 
 
 def soft_validate_json(
@@ -122,19 +91,23 @@ def soft_validate_json(
     *,
     schema: dict[str, Any] | None = None,
     schema_path: str | Path | None = None,
+    strict: bool = False,
 ) -> None:
     """Validate JSON data against a schema using soft assertions.
 
     This function performs JSON schema validation and records the result
     as a soft assertion, allowing the test to continue even if validation fails.
+    When strict mode is enabled, validation failures raise an exception instead.
 
     Args:
         data: The JSON data to validate.
         schema: JSON Schema as a dictionary (optional, mutually exclusive with schema_path).
         schema_path: Path to a JSON Schema file (optional, used if schema is not provided).
+        strict: If True, raises JsonValidationError on validation failure instead of soft assertion.
 
     Raises:
         ValueError: If no schema is provided via either parameter.
+        JsonValidationError: If strict=True and validation fails.
 
     Example:
         >>> user_data = {"id": 123, "name": "John", "email": "john@example.com"}
@@ -148,6 +121,8 @@ def soft_validate_json(
         ...     "required": ["id", "name", "email"]
         ... }
         >>> soft_validate_json(user_data, schema=schema)
+        >>> # For strict validation:
+        >>> soft_validate_json(user_data, schema=schema, strict=True)
     """
     if schema is None and schema_path is not None:
         schema = _load_json_schema(schema_path)
@@ -155,5 +130,11 @@ def soft_validate_json(
     if schema is None:
         raise ValueError(ERROR_NO_SCHEMA)
 
-    is_valid, error_message = _validate_json_data(data, schema)
-    soft_assert(is_valid, error_message)
+    is_valid, error_message, formatted_errors = _validate_json_data(data, schema)
+
+    if strict and not is_valid:
+        # Convert formatted_errors to list of strings if it's not already
+        error_list = formatted_errors if isinstance(formatted_errors, list) else [str(formatted_errors)]
+        raise JsonValidationError(error_message, error_list)
+
+    soft_assert(is_valid, error_message, formatted_errors)
