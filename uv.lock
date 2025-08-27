@@ -359,11 +359,11 @@ dependencies = [
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "pytest" },
+    { name = "pytest-asyncio" },
 ]
 
 [package.dev-dependencies]
 dev = [
-    { name = "pytest-asyncio" },
     { name = "ruff" },
 ]
 
@@ -372,13 +372,11 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "jsonschema", specifier = ">=4.25.1" },
     { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
 ]
 
 [package.metadata.requires-dev]
-dev = [
-    { name = "pytest-asyncio", specifier = ">=1.1.0" },
-    { name = "ruff", specifier = ">=0.12.9" },
-]
+dev = [{ name = "ruff", specifier = ">=0.12.9" }]
 
 [[package]]
 name = "sniffio"
