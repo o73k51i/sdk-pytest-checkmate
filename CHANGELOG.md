@@ -12,6 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve HTTP client handling (hide sensitive data)
 - Improve HTML report
 
+## [0.4.0a3] - 2025-08-29
+
+### Enhanced
+- **Test Status Reporting**: Enhanced test status determination logic for better accuracy
+  - Improved XFAIL/XPASS status detection and handling
+  - Better integration between pytest's native status system and custom status logic
+  - Enhanced handling of soft assertions with expected failures
+- **Terminal Output**: Customized terminal output formatting to match HTML report status logic
+  - Added `pytest_report_teststatus` hook for consistent status display
+  - Improved status mapping for XFAIL, XPASS, and other test outcomes
+  - Better alignment between terminal display and HTML report generation
+
+### Fixed
+- **XFAIL Status Handling**: Fixed status reporting for tests marked with `@pytest.mark.xfail`
+  - Proper detection of expected failures with soft assertions
+  - Correct status assignment for parametrized tests with xfail markers
+  - Improved handling of mixed xfail scenarios (marker + `pytest.xfail()` calls)
+
+### Testing
+- **Extended Test Coverage**: Added comprehensive tests for XFAIL status reporting scenarios
+
 ## [0.4.0a2] - 2025-08-28
 
 ### Fixed
