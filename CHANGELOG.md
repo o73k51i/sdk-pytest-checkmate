@@ -8,8 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Add SQL query client with automatic logging
-- Add asynchronous HTTP client
+- Add a client for working with databases
+- Improve HTTP client handling (hide sensitive data)
 - Improve HTML report
 
 
