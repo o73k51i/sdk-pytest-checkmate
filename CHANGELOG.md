@@ -8,11 +8,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Add SQL query client with automatic logging
-- Add asynchronous HTTP client
+- Add a client for working with databases
+- Improve HTTP client handling (hide sensitive data)
 - Improve HTML report
 
+## [0.4.0a0] - 2025-08-28
 
+### Added
+- **JSON Schema Validation**: `soft_validate_json()` function for non-fatal JSON schema validation with detailed error reporting
+  - Support for inline schema dictionaries and external schema files
+  - Strict mode option for raising exceptions instead of soft assertions
+  - Comprehensive error formatting with path information
+  - Integration with soft assertions for test continuity
+- **Asynchronous HTTP Client**: Enhanced `AsyncHttpClient` class for async API testing
+  - Automatic request/response reporting to HTML reports
+  - Context manager support for proper resource cleanup
+  - Full compatibility with httpx AsyncClient features
+- **Enhanced HTTP Client Architecture**: 
+  - Refactored `HttpClient` and `AsyncHttpClient` as primary classes
+  - Removed deprecated `create_http_client()` and `async_create_http_client()` functions
+  - Improved class-based API for better type safety and extensibility
+- **Enhanced Soft Assertions**:
+  - Optional `details` parameter for `soft_assert()` function
+  - Support for custom debugging information
+  - Improved condition evaluation and error reporting
+  - Better integration with test reporting system
+- **Comprehensive Documentation Suite**:
+  - Complete documentation structure in `docs/` directory
+  - Installation guide with technical requirements
+  - Feature documentation with SDK API references
+  - Configuration guide for command-line parameters
+  - FAQ covering common questions and troubleshooting
+  - Reports documentation for HTML generation
+  - Main documentation with quick start examples
+
+### Enhanced
+- **HTML Report Generation**:
+  - Added test statistics overview for better test result analysis
+  - Custom title and parameter ID support in test results
+  - Enhanced detail view with test function names
+  - Improved parameter display for parametrized tests
+  - Better visual organization of test data
+- **Test Organization**:
+  - Enhanced parametrize test naming for better identification
+  - Improved test structure across all test modules
+  - Better type hints and documentation in test files
+  - Clearer test function organization and naming
+- **Code Quality**:
+  - Comprehensive type hints across all modules
+  - Enhanced docstrings for better code documentation
+  - Improved error handling and validation
+  - Better separation of concerns in module architecture
+
+### Refactored
+- **Module Architecture**: Complete refactoring of core modules for better maintainability
+  - `_core.py`: Enhanced step and soft assertion management
+  - `_http_client.py`: Class-based HTTP client implementation
+  - `_json_validator.py`: New module for JSON schema validation
+  - `_plugin.py`: Improved pytest plugin integration
+  - `_report_generator.py`: Enhanced HTML report generation
+- **Import Structure**: Streamlined module exports in `__init__.py`
+  - Primary exports: `HttpClient`, `AsyncHttpClient`, `soft_validate_json`
+  - Maintained backward compatibility for existing functions
+  - Removed unused internal function exports
+- **Test Suite**: Comprehensive refactoring of test modules
+  - Enhanced type safety with proper type hints
+  - Improved test documentation and structure
+  - Better test organization and naming conventions
+
+### Fixed
+- **Session Management**: Fixed attribute access for checkmate start time in pytest session finish
+- **Plugin Integration**: Improved pytest plugin compatibility and error handling
+- **Report Generation**: Enhanced stability and error handling in HTML report creation
+
+### Documentation
+- **Project Description**: Updated package description to "Advanced pytest-based testing framework for QA engineers and test automation specialists"
+- **Enhanced Keywords**: Expanded keyword list to include comprehensive testing and automation terms
+- **Documentation Links**: Updated documentation URL to point to structured docs in `docs/main.md`
+- **README**: Comprehensive refactoring with updated examples and usage patterns
+
+### Technical Details
+- **Dependencies**: Added `jsonschema>=4.25.1` for JSON schema validation support
+- **Code Quality**: Enhanced linting configuration and code formatting standards
+- **Type Safety**: Improved type annotations
+- **Performance**: Optimized report generation and data handling
+
+### Breaking Changes
+- Removed `create_http_client()` and `async_create_http_client()` functions (use `HttpClient` and `AsyncHttpClient` classes instead)
+- Function signature changes in some internal APIs (public API remains compatible)
+
+### Migration Guide
+- Replace `create_http_client(url)` with `HttpClient(url)`
+- Replace `async_create_http_client(url)` with `AsyncHttpClient(url)`
+- Update imports to use new class-based HTTP clients
+=======
 ## [0.4.0a0] - 2025-08-26
 
 ### Added

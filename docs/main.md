@@ -1,8 +1,18 @@
-# sdk-pytest-checkmate
+# sdk-pytest-checkmate - Documentation
 
-[![PyPI](https://img.shields.io/pypi/v/sdk-pytest-checkmate)](https://pypi.org/project/sdk-pytest-checkmate/)
-[![Python](https://img.shields.io/pypi/pyversions/sdk-pytest-checkmate.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+Welcome to the SDK pytest checkmate documentation - a powerful SDK for testing
+specialists, based on pytest and providing extended functionality for writing
+tests with support for test steps, soft assertions, and HTML report generation.
+
+## 📖 Documentation Contents
+
+- [📦 Installation](./installation.md)
+- [🎯 Key Features](./features.md)
+- [📊 Reports](./reports.md)
+- [⚙️ Configuration](./configuration.md)
+- [❓ FAQ](./faq.md)
+
+## 🎯 What is sdk-pytest-checkmate?
 
 **A powerful SDK for testing specialists** - advanced pytest-based testing
 framework with structured test steps, soft assertions, automatic HTTP logging,
@@ -71,43 +81,6 @@ Generate your first report:
 pytest --report-html=report.html
 ```
 
-## SDK API Functions
-
-- `step(name: str)` - Context manager for creating steps
-- `soft_assert(condition, message, details)` - Soft assertion
-- `add_data_report(data, label)` - Add data to report
-- `HttpClient(base_url, **kwargs)` - HTTP client
-- `AsyncHttpClient(base_url, **kwargs)` - Asynchronous HTTP client
-- `soft_validate_json(data, schema, schema_path, strict)` - JSON data validation
-
-
-## Command Line Options
-
-- `--report-html[=PATH]` - Generate HTML report
-- `--report-title=TITLE` - Custom report title  
-- `--report-json=PATH` - Export JSON results
-- `--env-file=PATH` - Load environment variables
-
-## 📖 Complete Documentation
-
-For comprehensive guides and advanced usage:
-
-- **[📦 Installation Guide](./docs/installation.md)** - Setup and requirements
-- **[🎯 Features Overview](./docs/features.md)** - Complete API reference
-- **[📊 Reports Guide](./docs/reports.md)** - HTML report features
-- **[⚙️ Configuration](./docs/configuration.md)** - Settings and options
-- **[❓ FAQ](./docs/faq.md)** - Common questions and troubleshooting
-
-## 🤝 Contributing & Support
-
-- 📖  **[Report Issues](https://github.com/o73k51i/sdk-pytest-checkmate/issues)** - Bug reports and feature requests
-- 📖 **[Discussions](https://github.com/o73k51i/sdk-pytest-checkmate/discussions)** - Questions and community support
-- 📖 **[Documentation](./docs/main.md)** - Complete documentation index
-
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-**Built for testing specialists who demand quality, clarity, and comprehensive reporting.** 🚀
