@@ -85,13 +85,27 @@ def _determine_test_status(rep: object) -> str:
     Returns:
         Test status string (PASSED, FAILED, ERROR, SKIPPED, XFAIL, XPASS).
     """
+    outcome = getattr(rep, "outcome", "")
+    wasxfail = getattr(rep, "wasxfail", False)
+    when = getattr(rep, "when", "")
+
+    if outcome == "skipped":
+        return "XFAIL" if wasxfail else "SKIPPED"
+    if outcome == "failed":
+        if wasxfail:
+            return "XFAIL"
+        return "FAILED" if when == "call" else "ERROR"
+    if outcome == "passed":
+        return "XPASS" if wasxfail else "PASSED"
+
     if rep.skipped:  # type: ignore[attr-defined]
-        return "XFAIL" if getattr(rep, "wasxfail", False) else "SKIPPED"
+        return "XFAIL" if wasxfail else "SKIPPED"
     if rep.failed:  # type: ignore[attr-defined]
-        return "XFAIL" if getattr(rep, "wasxfail", False) else ("FAILED" if rep.when == "call" else "ERROR")  # type: ignore[attr-defined]
+        return "XFAIL" if wasxfail else ("FAILED" if when == "call" else "ERROR")
     if rep.passed:  # type: ignore[attr-defined]
-        return "XPASS" if getattr(rep, "wasxfail", False) else "PASSED"
-    return rep.outcome.upper()  # type: ignore[attr-defined]
+        return "XPASS" if wasxfail else "PASSED"
+
+    return outcome.upper()
 
 
 def _extract_test_metadata(item: pytest.Item) -> tuple[str, str | None, str | None]:
@@ -262,10 +276,12 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
 
     if rep.when == "call":  # type: ignore[attr-defined]
         ctx = item.stash.get(STASH_CTX, None)
-        if ctx and ctx["soft_failures"] and rep.passed:  # type: ignore[attr-defined]
+        if ctx and ctx["soft_failures"]:
             lines = [f"Soft assertion failures ({len(ctx['soft_failures'])}):"] + [
                 f" {i + 1}. {m}" for i, m in enumerate(ctx["soft_failures"])
             ]
+
+            # Always mark as failed for terminal display, but preserve xfail info for proper handling
             rep.outcome = "failed"  # type: ignore[attr-defined]
             rep.longrepr = "\n".join(lines)  # type: ignore[attr-defined]
 
@@ -292,6 +308,42 @@ def pytest_runtest_makereport(item: pytest.Item, call: pytest.CallInfo[None]) ->
     )
 
     item.config.stash[STASH_RESULTS].append(test_result)
+
+
+def pytest_report_teststatus(report: object, config: pytest.Config) -> tuple[str, str, str] | None:  # noqa: ARG001
+    """Customize how test results are reported in terminal output.
+
+    This ensures terminal output matches our HTML report status logic.
+
+    Args:
+        report: Test report object.
+        config: Pytest config (unused but required by pytest).
+
+    Returns:
+        Tuple of (category, shortletter, verbose) or None to use default behavior.
+    """
+    if report.when != "call":  # type: ignore[attr-defined]
+        return None
+
+    # Use our enhanced status determination logic
+    status = _determine_test_status(report)
+
+    # Map our statuses to pytest terminal display format
+    status_mapping = {
+        "PASSED": ("passed", ".", "PASSED"),
+        "FAILED": ("failed", "F", "FAILED"),
+        "ERROR": ("error", "E", "ERROR"),
+        "SKIPPED": ("skipped", "s", "SKIPPED"),
+        "XFAIL": ("xfailed", "x", "XFAIL"),
+        "XPASS": ("xpassed", "X", "XPASS"),
+    }
+
+    if status in status_mapping:
+        category, shortletter, verbose = status_mapping[status]
+        # For xfail/xpass, let pytest handle the reason display automatically
+        return category, shortletter, verbose
+
+    return None
 
 
 def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # noqa: ARG001
