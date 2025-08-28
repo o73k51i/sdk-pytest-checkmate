@@ -209,7 +209,7 @@ def _create_test_result_dict(
     from ._models import DataRecord, SoftCheckRecord, StepRecord
 
     return {
-        "name": item.name,
+        "name": item.nodeid,
         "title": title,
         "status": status,
         "duration": rep.duration,  # type: ignore[attr-defined]
