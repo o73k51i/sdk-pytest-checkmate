@@ -188,8 +188,13 @@ def format_errors(r: dict[str, Any]) -> str:
 
     Note:
         Handles different error types including test failures, step errors, and soft assertion failures.
+        Does not show errors block for SKIPPED, XFAIL, and XPASS statuses as they are not actual errors.
     """
     status = r.get("status")
+
+    if status in {"SKIPPED", "XFAIL", "XPASS"}:
+        return ""
+
     steps = r.get("steps", [])
     soft = r.get("soft_checks", [])
     failed_soft = [s for s in soft if not s.get("passed")]
@@ -198,10 +203,6 @@ def format_errors(r: dict[str, Any]) -> str:
     parts: list[str] = []
     if failure_text:
         parts.append(f"<pre class='details'>{escape_html(failure_text)}</pre>")
-    if status in {"SKIPPED", "XFAIL", "XPASS"}:
-        reason = r.get("full", "")
-        if reason:
-            parts.append(f"<pre class='details'>{escape_html(reason)}</pre>")
     if step_errors:
         li = [
             f"<li><span class='step-error'>Step '{escape_html(s.get('name', ''))}': "
@@ -269,43 +270,49 @@ def get_html_css() -> str:
     """
     return """
     body { font-family: -apple-system, Arial, sans-serif; margin:0; padding:0 0 60px 0; background:#f6f8fa; }
-    header { background:#e8f1ff; padding:14px 24px; font-size:20px; font-weight:600; text-align:center; }
-    header .title { }
+    header { background:#e8f1ff; padding:14px 24px; font-size:20px; font-weight:600; text-align:center; overflow-wrap:break-word; word-wrap:break-word; }
+    header .title { overflow-wrap:break-word; word-wrap:break-word; }
     .theme-toggle { cursor:pointer; border:1px solid #b4c7dd; background:#fff; color:#0a2a45; padding:6px 14px; border-radius:18px; font-size:13px; font-weight:500; box-shadow:0 1px 2px rgba(0,0,0,.12); transition:background .15s,border-color .15s; }
     .theme-toggle-floating { position:fixed; top:10px; right:14px; z-index:1100; }
     .theme-toggle:hover { background:#f0f6ff; }
     .summary { display:flex; gap:12px; flex-wrap:wrap; padding:12px 24px; justify-content:center; }
-    .badge { border:1px solid #3332; border-radius:999px; padding:6px 14px; cursor:pointer; font-size:13px; background:#fff; }
+    .badge { border:1px solid #3332; border-radius:999px; padding:6px 14px; cursor:pointer; font-size:13px; background:#fff; overflow-wrap:break-word; word-wrap:break-word; }
     .badge[data-status="PASSED"] { background:#d4f7d9; }
     .badge[data-status="FAILED"] { background:#ffd8d6; }
     .badge[data-status="ERROR"] { background:#ffe1b3; }
     .badge[data-status="SKIPPED"] { background:#fff5cc; }
     .badge[data-status="XFAIL"], .badge[data-status="XPASS"] { background:#e6dcff; }
-    table { border-collapse:collapse; width:100%; background:#fff; }
-    th, td { border:1px solid #d0d7de; padding:6px 8px; font-size:13px; vertical-align:top; }
+    table { border-collapse:collapse; width:100%; background:#fff; table-layout:fixed; }
+    th, td { border:1px solid #d0d7de; padding:6px 8px; font-size:13px; vertical-align:top; overflow-wrap:break-word; word-wrap:break-word; }
     th { background:#f0f6ff; text-align:left; }
-    .details { white-space:pre-wrap; font-family:Menlo, monospace; max-width:480px; max-height:240px; overflow:auto; }
+    th:nth-child(1), td:nth-child(1) { width:35%; } /* Test column */
+    th:nth-child(2), td:nth-child(2) { width:10%; } /* Status column */
+    th:nth-child(3), td:nth-child(3) { width:12%; } /* Duration column */
+    th:nth-child(4), td:nth-child(4) { width:43%; } /* Details column */
+    pre { white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; max-width:100%; box-sizing:border-box; }
+    .details { white-space:pre-wrap; font-family:Menlo, monospace; max-width:100%; max-height:240px; overflow:auto; word-wrap:break-word; overflow-wrap:anywhere; }
     tr.status-PASSED td.details { color:#1a7f37; }
     tr.status-FAILED td.details { color:#b30000; }
     tr.status-ERROR td.details { color:#c85500; }
     tr.status-SKIPPED td.details { color:#8a6d00; }
     tr.status-XFAIL td.details, tr.status-XPASS td.details { color:#6941c6; }
-    .steps { margin:4px 0 0 0; padding:0 0 0 28px; list-style:decimal; }
-    .checks { list-style:none; margin:4px 0 4px 0; padding-left:28px; }
-    .checks li { font-size:12px; }
+    .steps { margin:4px 0 0 0; padding:0 0 0 28px; list-style:decimal; overflow-wrap:break-word; word-wrap:break-word; }
+    .checks { list-style:none; margin:4px 0 4px 0; padding-left:28px; overflow-wrap:break-word; word-wrap:break-word; }
+    .checks li { font-size:12px; overflow-wrap:break-word; word-wrap:break-word; }
     .data-items { list-style:none; margin:2px 0 2px 0; padding-left:24px; }
     .data-items .data-item { list-style:none; }
     .checks li.fail { color:#c40000; font-weight:600; }
     .checks li.pass { color:#1a7f37; }
     .check-summary[data-has-details="true"] { cursor:pointer; text-decoration:underline; }
-    .check-details { margin-top:4px; }
-    .step-error { color:#c40000; font-weight:600; }
-    .data-item { margin:4px 0; }
-    .data-item .data-summary { cursor:pointer; font-weight:500; color:#0366d6; }
+    .check-details { margin-top:4px; overflow-wrap:break-word; word-wrap:break-word; }
+    .check-details pre { white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; max-width:100%; box-sizing:border-box; }
+    .step-error { color:#c40000; font-weight:600; overflow-wrap:break-word; word-wrap:break-word; }
+    .data-item { margin:4px 0; overflow-wrap:break-word; word-wrap:break-word; }
+    .data-item .data-summary { cursor:pointer; font-weight:500; color:#0366d6; overflow-wrap:break-word; word-wrap:break-word; }
     .data-item .data-summary::before { content:'▶'; display:inline-block; margin-right:4px; transition:transform .18s ease; }
     .data-item.expanded .data-summary::before { transform:rotate(90deg); }
-    .data-item .data-details { margin:4px 0 0 18px; }
-    .data-item .data-details pre { 
+    .data-item .data-details { margin:4px 0 0 18px; overflow-wrap:break-word; word-wrap:break-word; }
+    .data-item .data-details pre {
         max-width:100%;
         box-sizing:border-box;
         padding:8px 10px;
@@ -322,13 +329,14 @@ def get_html_css() -> str:
         max-height:340px;
     }
     .data-item .data-details pre { overflow-wrap:anywhere; }
-    .errors-block { border:1px solid #e99; background:#ffecec; padding:8px 12px; margin-top:12px; border-radius:4px; }
+    .errors-block { border:1px solid #e99; background:#ffecec; padding:8px 12px; margin-top:12px; border-radius:4px; overflow-wrap:break-word; word-wrap:break-word; }
     .errors-block h4 { margin:0 0 6px 0; color:#b30000; }
+    .errors-block pre { white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word; max-width:100%; box-sizing:border-box; }
     footer { position:fixed; bottom:0; left:0; right:0; background:#e8f1ff; padding:8px 16px; font-size:12px; color:#555; text-align:center; border-top:1px solid #d0d7de; }
     .hidden { display:none; }
     tr.main-row { cursor:pointer; }
     tr.detail-row td { background:#f3f6f9; }
-    .detail-card { background:#fff; border:1px solid #d0d7de; border-left:6px solid #888; padding:10px 16px 14px 16px; border-radius:6px; max-width:880px; margin:6px auto; box-shadow:0 2px 4px -2px rgba(0,0,0,0.12); }
+    .detail-card { background:#fff; border:1px solid #d0d7de; border-left:6px solid #888; padding:10px 16px 14px 16px; border-radius:6px; max-width:100%; width:100%; box-sizing:border-box; margin:6px auto; box-shadow:0 2px 4px -2px rgba(0,0,0,0.12); overflow-wrap:break-word; word-wrap:break-word; }
     .detail-card.status-PASSED { border-left-color:#1a7f37; }
     .detail-card.status-FAILED { border-left-color:#b30000; }
     .detail-card.status-ERROR { border-left-color:#c85500; }
@@ -362,12 +370,16 @@ def get_html_css() -> str:
 
     /* ---------------- DARK THEME (activated via body.theme-dark) ---------------- */
     body.theme-dark { background:#1f2530; color:#d8dee6; }
-    body.theme-dark header { background:#263040; color:#fff; }
+    body.theme-dark header { background:#263040; color:#fff; overflow-wrap:break-word; word-wrap:break-word; }
     body.theme-dark .theme-toggle { background:#324054; border-color:#44556b; color:#e2ecf5; }
     body.theme-dark .theme-toggle:hover { background:#3a4b60; }
     body.theme-dark table { background:#27313f; }
     body.theme-dark th { background:#324054; color:#dfe6ee; }
     body.theme-dark th, body.theme-dark td { border-color:#425264; }
+    body.theme-dark th:nth-child(1), body.theme-dark td:nth-child(1) { width:35%; } /* Test column */
+    body.theme-dark th:nth-child(2), body.theme-dark td:nth-child(2) { width:10%; } /* Status column */
+    body.theme-dark th:nth-child(3), body.theme-dark td:nth-child(3) { width:12%; } /* Duration column */
+    body.theme-dark th:nth-child(4), body.theme-dark td:nth-child(4) { width:43%; } /* Details column */
     /* Dark theme: color the Details column by status, matching status badge colors */
     body.theme-dark tr.status-PASSED td.details { color:#61d088; }
     body.theme-dark tr.status-FAILED td.details { color:#ff8d87; }
@@ -375,10 +387,12 @@ def get_html_css() -> str:
     body.theme-dark tr.status-SKIPPED td.details { color:#e7d47a; }
     body.theme-dark tr.status-XFAIL td.details, body.theme-dark tr.status-XPASS td.details { color:#b7a4ff; }
     body.theme-dark .detail-row td { background:#2e3947; }
-    body.theme-dark .detail-card { background:#27313f; border-color:#425264; box-shadow:0 2px 4px -2px rgba(0,0,0,.55); }
-    body.theme-dark .errors-block { background:#3d2225; border-color:#a04444; }
+    body.theme-dark .detail-card { background:#27313f; border-color:#425264; box-shadow:0 2px 4px -2px rgba(0,0,0,.55); overflow-wrap:break-word; word-wrap:break-word; }
+    body.theme-dark .errors-block { background:#3d2225; border-color:#a04444; overflow-wrap:break-word; word-wrap:break-word; }
+    body.theme-dark .errors-block pre { overflow-wrap:anywhere; word-break:break-word; }
+    body.theme-dark .check-details pre { overflow-wrap:anywhere; word-break:break-word; }
     body.theme-dark footer { background:#263040; color:#b9c3cf; border-top-color:#425264; }
-    body.theme-dark .badge { background:#324054; border-color:#4a5b6e; color:#d8dee6; }
+    body.theme-dark .badge { background:#324054; border-color:#4a5b6e; color:#d8dee6; overflow-wrap:break-word; word-wrap:break-word; }
     body.theme-dark .badge[data-status="PASSED"] { background:#1f5a2c; color:#d9f6e0; }
     body.theme-dark .badge[data-status="FAILED"] { background:#6a2320; color:#ffd9d8; }
     body.theme-dark .badge[data-status="ERROR"] { background:#744417; color:#ffe0c2; }

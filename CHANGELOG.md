@@ -12,6 +12,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve HTTP client handling (hide sensitive data)
 - Improve HTML report
 
+## [0.4.0a2] - 2025-08-28
+
+### Fixed
+- **JSON Schema Validation**: Enhanced strict mode behavior to use `pytest.fail()` instead of custom exceptions
+  - Improved integration with pytest's native failure reporting
+  - Better error handling and test failure reporting consistency
+- **HTML Report Generation**: 
+  - Fixed error display to exclude SKIPPED, XFAIL, and XPASS statuses from error formatting
+  - Updated test result identification to use `item.nodeid` instead of `item.name` for better accuracy
+- **CSS Styling**: Improved responsiveness and readability in HTML reports
+
+### Testing
+- **Extended Test Coverage**: Added comprehensive tests for strict validation modes
+  - Added tests for valid and invalid JSON data in strict mode
+  - Enhanced validation test scenarios
+
 ## [0.4.0a1] - 2025-08-28
 
 ### Refactored
