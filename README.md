@@ -20,7 +20,7 @@ and interactive HTML reports.
 - 📝 **Structured test steps** - Organize tests into logical, timed blocks
 - 🔍 **Soft assertions** - Collect all errors without stopping test execution
 - 🌐 **Automatic HTTP reporting** - Track all API requests and responses seamlessly
-- � **Interactive HTML reports** - Rich reports with filtering and detailed analysis
+- 📊 **Interactive HTML reports** - Rich reports with filtering and detailed analysis
 - 🔄 **Full async support** - Works with both synchronous and asynchronous tests
 - 🛡️ **JSON schema validation** - Validate API responses with soft assertions
 - 📋 **Epic/Story organization** - Group tests hierarchically for better management
@@ -71,7 +71,7 @@ Generate your first report:
 pytest --report-html=report.html
 ```
 
-## SDK API Functions
+## 📖 SDK API Functions
 
 - `step(name: str)` - Context manager for creating steps
 - `soft_assert(condition, message, details)` - Soft assertion
@@ -81,7 +81,7 @@ pytest --report-html=report.html
 - `soft_validate_json(data, schema, schema_path, strict)` - JSON data validation
 
 
-## Command Line Options
+## 📖 Command Line Options
 
 - `--report-html[=PATH]` - Generate HTML report
 - `--report-title=TITLE` - Custom report title  
