@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve HTTP client handling (hide sensitive data)
 - Improve HTML report
 
-
 ## [0.4.0a0] - 2025-08-28
 
 ### Added
@@ -102,6 +101,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replace `create_http_client(url)` with `HttpClient(url)`
 - Replace `async_create_http_client(url)` with `AsyncHttpClient(url)`
 - Update imports to use new class-based HTTP clients
+=======
+## [0.4.0a0] - 2025-08-26
+
+### Added
+- `soft_validator_json()` function for non-fatal JSON schema validation with detailed error reporting
 
 ## [0.3.0a6] - 2025-08-25
 
