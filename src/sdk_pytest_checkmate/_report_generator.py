@@ -188,8 +188,13 @@ def format_errors(r: dict[str, Any]) -> str:
 
     Note:
         Handles different error types including test failures, step errors, and soft assertion failures.
+        Does not show errors block for SKIPPED, XFAIL, and XPASS statuses as they are not actual errors.
     """
     status = r.get("status")
+
+    if status in {"SKIPPED", "XFAIL", "XPASS"}:
+        return ""
+
     steps = r.get("steps", [])
     soft = r.get("soft_checks", [])
     failed_soft = [s for s in soft if not s.get("passed")]
@@ -198,10 +203,6 @@ def format_errors(r: dict[str, Any]) -> str:
     parts: list[str] = []
     if failure_text:
         parts.append(f"<pre class='details'>{escape_html(failure_text)}</pre>")
-    if status in {"SKIPPED", "XFAIL", "XPASS"}:
-        reason = r.get("full", "")
-        if reason:
-            parts.append(f"<pre class='details'>{escape_html(reason)}</pre>")
     if step_errors:
         li = [
             f"<li><span class='step-error'>Step '{escape_html(s.get('name', ''))}': "
