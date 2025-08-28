@@ -12,6 +12,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improve HTTP client handling (hide sensitive data)
 - Improve HTML report
 
+## [0.4.0a1] - 2025-08-28
+
+### Refactored
+- **JSON Validator Module Cleanup**: Removed redundant `json_validator.py` module
+  - Consolidated JSON validation functionality into `_json_validator.py`
+  - Removed duplicate implementation to improve code maintainability
+  - Maintained backward compatibility through existing `soft_validate_json()` function
+
+### Fixed
+- **JSON Schema Error Handling**: Enhanced error handling for invalid JSON schema definitions
+  - Better error messages when schema validation fails due to malformed schemas
+  - Improved exception handling with detailed error information
+  - Added support for edge cases in JSON schema validation
+
+### Testing
+- **Extended Test Coverage**: Added comprehensive tests for JSON schema validation edge cases
+  - Added tests for invalid JSON schema handling
+  - Added tests for empty schema behavior validation
+  - Enhanced test coverage for error scenarios
+
 ## [0.4.0a0] - 2025-08-28
 
 ### Added
