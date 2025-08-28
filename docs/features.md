@@ -142,7 +142,7 @@ Validates JSON data against JSON Schema specification.
 - `data`: Any JSON-serializable Python object (dict, list, str, int, float, bool, None)
 - `schema`: JSON Schema as dictionary (optional, mutually exclusive with schema_path)
 - `schema_path`: Path to JSON Schema file (optional, used if schema is not provided)
-- `strict`: If True, raises JsonValidationError on validation failure instead of soft assertion.
+- `strict`: If True, calls pytest.fail() on validation failure instead of soft assertion.
 
 ```python
 from sdk_pytest_checkmate import soft_validate_json

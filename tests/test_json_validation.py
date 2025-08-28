@@ -2,7 +2,7 @@
 
 import pytest
 
-from sdk_pytest_checkmate import soft_validate_json
+from sdk_pytest_checkmate import soft_validate_json, soft_assert
 
 
 @pytest.mark.epic("Project functionality")
@@ -56,3 +56,19 @@ class TestJsonValidation:
             },
         }
         soft_validate_json(json_data, schema=schema)
+
+    @pytest.mark.title("Strict Validation - Valid Data")
+    def test_strict_validation_valid_data(self) -> None:
+        """Test strict validation with valid data - should pass."""
+        json_data = {"key": "value"}
+        schema = {"type": "object", "properties": {"key": {"type": "string"}}}
+        soft_validate_json(json_data, schema=schema, strict=True)
+        soft_assert(True, "Strict validation passed")
+
+    @pytest.mark.title("Strict Validation - Invalid Data")
+    def test_strict_validation_invalid_data(self) -> None:
+        """Test strict validation with invalid data - should fail immediately."""
+        json_data = {"key": 123}
+        schema = {"type": "object", "properties": {"key": {"type": "string"}}}
+        soft_validate_json(json_data, schema=schema, strict=True)
+        soft_assert(True, "Strict validation passed")

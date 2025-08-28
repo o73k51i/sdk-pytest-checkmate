@@ -4,26 +4,13 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
 from jsonschema import ValidationError, validators
 from referencing.jsonschema import EMPTY_REGISTRY
 
 from ._constants import ERROR_NO_SCHEMA
 from ._core import soft_assert
 from ._types import JsonData
-
-
-class JsonValidationError(Exception):
-    """Custom exception for JSON validation errors."""
-
-    def __init__(self, message: str, errors: list[str]) -> None:
-        """Initialize the validation error.
-
-        Args:
-            message: The main error message.
-            errors: List of specific validation errors.
-        """
-        super().__init__(message)
-        self.errors = errors
 
 
 def _load_json_schema(path: str | Path) -> dict[str, Any]:
@@ -102,17 +89,17 @@ def soft_validate_json(
 
     This function performs JSON schema validation and records the result
     as a soft assertion, allowing the test to continue even if validation fails.
-    When strict mode is enabled, validation failures raise an exception instead.
+    When strict mode is enabled, validation failures cause the test to fail
+    immediately using pytest.fail().
 
     Args:
         data: The JSON data to validate.
         schema: JSON Schema as a dictionary (optional, mutually exclusive with schema_path).
         schema_path: Path to a JSON Schema file (optional, used if schema is not provided).
-        strict: If True, raises JsonValidationError on validation failure instead of soft assertion.
+        strict: If True, calls pytest.fail() on validation failure instead of soft assertion.
 
     Raises:
         ValueError: If no schema is provided via either parameter.
-        JsonValidationError: If strict=True and validation fails.
 
     Example:
         >>> user_data = {"id": 123, "name": "John", "email": "john@example.com"}
@@ -138,8 +125,10 @@ def soft_validate_json(
     is_valid, error_message, formatted_errors = _validate_json_data(data, schema)
 
     if strict and not is_valid:
-        # Convert formatted_errors to list of strings if it's not already
-        error_list = formatted_errors if isinstance(formatted_errors, list) else [str(formatted_errors)]
-        raise JsonValidationError(error_message, error_list)
+        if isinstance(formatted_errors, list):
+            detailed_message = f"{error_message}:\n" + "\n".join(formatted_errors)
+        else:
+            detailed_message = f"{error_message}: {formatted_errors}"
+        pytest.fail(reason=detailed_message)
 
     soft_assert(is_valid, error_message, formatted_errors)
