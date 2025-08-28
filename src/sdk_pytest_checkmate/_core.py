@@ -1,6 +1,10 @@
 """Core functionality for test steps, soft assertions, and data attachments."""
 
+import ast
+import inspect
+import re
 import time
+from pathlib import Path
 from types import TracebackType
 from typing import Self
 
@@ -124,157 +128,102 @@ def soft_assert(condition: bool, message: str | None = None, details: str | list
     msg = message or "Soft assertion"
 
     if details is None:
-        import ast
-        import inspect
-        import re
-        from pathlib import Path
-
-        frame = inspect.currentframe()
-        if frame and frame.f_back:
-            code = frame.f_back.f_code
+        try:
+            frame = inspect.currentframe().f_back  # type: ignore
+            code = frame.f_code  # type: ignore
             filename = code.co_filename
-            lineno = frame.f_back.f_lineno
-            frame_locals = frame.f_back.f_locals
-            frame_globals = frame.f_back.f_globals
+            lineno = frame.f_lineno  # type: ignore
+            glb, loc = frame.f_globals, frame.f_locals  # type: ignore
 
-            try:
-                lines = Path(filename).read_text(encoding="utf-8").splitlines()
-                if 0 <= lineno - 1 < len(lines):
-                    current_line = lineno - 1
-                    line_content = ""
+            lines = Path(filename).read_text(encoding="utf-8").splitlines()
+            if not (0 <= lineno - 1 < len(lines)):
+                raise OSError
 
-                    while current_line >= 0:
-                        current_text = lines[current_line].strip()
-                        line_content = current_text + " " + line_content
-                        if "soft_assert" in current_text:
+            start = lineno - 1
+            call_name_re = re.compile(r"(\b|\.)soft_assert\s*\(")
+            while start >= 0 and not call_name_re.search(lines[start]):
+                start -= 1
+            if start < 0:
+                raise RuntimeError
+
+            call_text = lines[start].strip()
+            i = start + 1
+            paren = call_text.count("(") - call_text.count(")")
+            while paren > 0 and i < len(lines):
+                call_text += " " + lines[i].strip()
+                paren += lines[i].count("(") - lines[i].count(")")
+                i += 1
+
+            m = call_name_re.search(call_text)
+            if not m:
+                raise RuntimeError
+            pos = call_text.find("(", m.end() - 1)
+            if pos == -1:
+                raise RuntimeError
+
+            depth = 1
+            j = pos + 1
+            while j < len(call_text) and depth > 0:
+                c = call_text[j]
+                if c == "(":
+                    depth += 1
+                elif c == ")":
+                    depth -= 1
+                j += 1
+            args_content = call_text[pos + 1 : j - 1].strip()
+
+            condition_str = None
+            args_ast = ast.parse(f"f({args_content})", mode="eval")
+            if isinstance(args_ast.body, ast.Call):
+                call = args_ast.body
+                if call.args:
+                    condition_str = ast.unparse(call.args[0])
+                else:
+                    for kw in call.keywords or []:
+                        if kw.arg == "condition":
+                            condition_str = ast.unparse(kw.value)
                             break
-                        current_line -= 1
 
-                    next_line = lineno
-                    while next_line < len(lines):
-                        if line_content.count("(") <= line_content.count(")"):
-                            break
-                        line_content += " " + lines[next_line].strip()
-                        next_line += 1
-
-                    condition_str = None
-
-                    match = re.search(r"soft_assert\s*\(", line_content)
-                    if match:
-                        start_pos = match.end() - 1
-                        paren_count = 0
-                        i = start_pos
-
-                        while i < len(line_content):
-                            if line_content[i] == "(":
-                                paren_count += 1
-                            elif line_content[i] == ")":
-                                paren_count -= 1
-                                if paren_count == 0:
-                                    break
-                            i += 1
-
-                        if paren_count == 0:
-                            args_content = line_content[start_pos + 1 : i]
-
+            if condition_str:
+                try:
+                    tree = ast.parse(condition_str, mode="eval")
+                    if isinstance(tree.body, ast.Compare) and tree.body.ops and tree.body.comparators:
+                        nodes = [tree.body.left] + list(tree.body.comparators)  # noqa: RUF005
+                        vals = []
+                        for n in nodes:
+                            src = ast.unparse(n)
                             try:
-                                args_ast = ast.parse(f"f({args_content})", mode="eval")
-                                if isinstance(args_ast.body, ast.Call) and args_ast.body.args:
-                                    condition_str = ast.unparse(args_ast.body.args[0])
+                                v = eval(src, glb, loc)  # noqa: S307
+                                vals.append(repr(v))
                             except Exception:
-                                bracket_count = 0
-                                paren_count = 0
-                                brace_count = 0
-                                quote_char = None
-
-                                for j, char in enumerate(args_content):
-                                    if quote_char:
-                                        if char == quote_char and (j == 0 or args_content[j - 1] != "\\"):
-                                            quote_char = None
-                                    elif char in ('"', "'"):
-                                        quote_char = char
-                                    elif char == "[":
-                                        bracket_count += 1
-                                    elif char == "]":
-                                        bracket_count -= 1
-                                    elif char == "(":
-                                        paren_count += 1
-                                    elif char == ")":
-                                        paren_count -= 1
-                                    elif char == "{":
-                                        brace_count += 1
-                                    elif char == "}":
-                                        brace_count -= 1
-                                    elif (
-                                        char == ","
-                                        and bracket_count == 0
-                                        and paren_count == 0
-                                        and brace_count == 0
-                                        and not quote_char
-                                    ):
-                                        condition_str = args_content[:j].strip()
-                                        break
-
-                                if not condition_str:
-                                    condition_str = args_content.strip()
-
-                    if condition_str:
+                                vals.append(src)
+                        op_map = {
+                            ast.Gt: ">",
+                            ast.Lt: "<",
+                            ast.GtE: ">=",
+                            ast.LtE: "<=",
+                            ast.Eq: "==",
+                            ast.NotEq: "!=",
+                            ast.Is: "is",
+                            ast.IsNot: "is not",
+                            ast.In: "in",
+                            ast.NotIn: "not in",
+                        }
+                        ops = [op_map.get(type(op), ast.unparse(op)) for op in tree.body.ops]
+                        evaluated = " ".join(v for pair in zip(vals, ops + [""], strict=False) for v in pair if v)  # noqa: RUF005
+                        details = f"{condition_str} => ({evaluated})"
+                    else:
                         try:
-                            tree = ast.parse(condition_str, mode="eval")
-
-                            if isinstance(tree.body, ast.Compare):
-                                comp = tree.body
-                                left_code = ast.unparse(comp.left)
-
-                                try:
-                                    left_value = eval(left_code, frame_globals, frame_locals)  # noqa: S307
-                                    left_repr = repr(left_value)
-                                except Exception:
-                                    left_repr = left_code
-
-                                if comp.ops and comp.comparators:
-                                    op = comp.ops[0]
-                                    right_code = ast.unparse(comp.comparators[0])
-
-                                    try:
-                                        right_value = eval(right_code, frame_globals, frame_locals)  # noqa: S307
-                                        right_repr = repr(right_value)
-                                    except Exception:
-                                        right_repr = right_code
-
-                                    op_map = {
-                                        ast.Gt: ">",
-                                        ast.Lt: "<",
-                                        ast.GtE: ">=",
-                                        ast.LtE: "<=",
-                                        ast.Eq: "==",
-                                        ast.NotEq: "!=",
-                                        ast.Is: "is",
-                                        ast.IsNot: "is not",
-                                        ast.In: "in",
-                                        ast.NotIn: "not in",
-                                    }
-                                    op_str = op_map.get(type(op), str(type(op).__name__))
-
-                                    details = f"{condition_str} ({left_repr} {op_str} {right_repr})"
-                                else:
-                                    details = condition_str
-                            else:
-                                try:
-                                    result = eval(condition_str, frame_globals, frame_locals)  # noqa: S307
-                                    details = f"{condition_str} (evaluates to {result!r})"
-                                except Exception:
-                                    details = condition_str
+                            result_val = eval(condition_str, glb, loc)  # noqa: S307
+                            details = f"{condition_str} => (evaluates to {result_val!r})"
                         except Exception:
                             details = condition_str
-                    else:
-                        details = str(condition)
-                else:
-                    details = str(condition)
-            except OSError:
-                details = str(condition)
-        else:
-            details = str(condition)
+                except Exception:
+                    details = condition_str
+            else:
+                details = str(bool(condition))
+        except Exception:
+            details = str(bool(condition))
 
     add_soft_check_record(msg, bool(condition), details)
     return bool(condition)
