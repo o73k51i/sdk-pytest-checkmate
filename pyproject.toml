@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "sdk-pytest-checkmate"
-version = "0.4.0a0"
+version = "0.4.0a1"
 description = "Advanced pytest-based testing framework for QA engineers and test automation specialists."
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
