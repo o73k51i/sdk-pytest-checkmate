@@ -314,7 +314,7 @@ def pytest_sessionfinish(session: pytest.Session, exitstatus: int) -> None:  # n
     if not results:
         return
 
-    start_ts = getattr(config, "_checkmate_start_time", None)
+    start_ts = getattr(config, "checkmate_start_time", None)
     end_ts = time.time()
     title_opt = config.getoption("report_title") or "Pytest report"
     json_path_opt = config.getoption("report_json")
