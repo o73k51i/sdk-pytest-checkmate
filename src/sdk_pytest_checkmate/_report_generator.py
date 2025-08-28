@@ -634,15 +634,27 @@ def _generate_html_sections(
             idx = row_index
             row_index += 1
             short = escape_html(r.get("short", ""))
+
+            has_custom_title = r.get("has_custom_title", False)
             params = r.get("params") or {}
-            if params:
+            param_id = r.get("param_id")
+
+            if has_custom_title and param_id:
+                title_cell = f"{escape_html(r['title'])} [{escape_html(param_id)}]"
+            elif has_custom_title and params:
                 inline_params = ", ".join(f"{escape_html(str(k))}={escape_html(str(v))}" for k, v in params.items())
                 title_cell = f"{escape_html(r['title'])} [{inline_params}]"
+            elif not has_custom_title:
+                title_cell = escape_html(r["title"])
             else:
                 title_cell = escape_html(r["title"])
             timeline_html = format_timeline(r.get("steps", []), r.get("soft_checks", []), r.get("data_reports", []))
             errors_html = format_errors(r)
-            expanded = f"<div class='detail-card status-{r['status']}'>{timeline_html}{errors_html}</div>"
+            function_name_header = f"<h4>Test function: {escape_html(r.get('name', ''))}</h4>" if r.get("name") else ""
+            expanded = (
+                f"<div class='detail-card status-{r['status']}'>"
+                f"{function_name_header}{timeline_html}{errors_html}</div>"
+            )
             rows.append(
                 f"<tr class='status-{r['status']} main-row' data-group='{group_id}' data-status='{r['status']}' data-idx='{idx}'><td>{title_cell}</td>"
                 f"<td class='status-cell'><span class='st-{r['status']}'>{r['status']}</span></td><td>{r['duration']:.3f}</td><td class='details'>{short}</td></tr>"
