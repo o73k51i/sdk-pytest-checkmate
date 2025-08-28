@@ -220,6 +220,7 @@ def _create_test_result_dict(
         "data_reports": [dr.to_dict() if isinstance(dr, DataRecord) else dr for dr in data_reports],
         "epic": epic,
         "story": story,
+        "has_custom_title": item.get_closest_marker("title") is not None,
         "params": {
             k: repr(v)
             for k, v in getattr(
@@ -228,6 +229,11 @@ def _create_test_result_dict(
                 {},
             ).items()
         },
+        "param_id": getattr(
+            getattr(item, "callspec", None),
+            "id",
+            None,
+        ),
     }
 
 
