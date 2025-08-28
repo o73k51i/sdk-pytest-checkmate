@@ -22,6 +22,18 @@ class TestJsonValidation:
         json_data = {"key": 123}
         soft_validate_json(json_data, schema={"type": "object", "properties": {"key": {"type": "string"}}})
 
+    @pytest.mark.title("Invalid JSON Schema Test")
+    def test_invalid_json_schema(self) -> None:
+        """Test validation with invalid JSON schema definition."""
+        json_data = {"key": 123}
+        soft_validate_json(json_data, schema={"type": "object", "properties": {"key": {"type": None}}})
+
+    @pytest.mark.title("Empty Schema Test")
+    def test_empty_schema_allows_any_data(self) -> None:
+        """Test that empty schema {} allows any data (this is correct JSON Schema behavior)."""
+        json_data = {"key": 123}
+        soft_validate_json(json_data, schema={})
+
     @pytest.mark.title("Complex JSON Test")
     def test_complex_json(self) -> None:
         """Test complex JSON structure."""

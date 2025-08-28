@@ -83,7 +83,12 @@ def _validate_json_data(data: JsonData, schema: dict[str, Any]) -> tuple[bool, s
 
         return (True, "JSON Schema validation passed", None)
     except Exception as e:
-        return (False, "JSON Schema validation error", f"{e}")
+        error_details = [
+            f"Schema validation error: {type(e).__name__}",
+            f"Error message: {e}",
+            "This usually indicates an invalid JSON Schema definition",
+        ]
+        return (False, "JSON Schema validation error", error_details)
 
 
 def soft_validate_json(
